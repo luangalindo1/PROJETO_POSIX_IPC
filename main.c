@@ -70,7 +70,7 @@ int main() {
         // Atualizar informações do veículo
         current_speed = sensor_read_car_speed(sensor_pin_a, sensor_pin_b, wheel_diameter);
         distance_traveled += (current_speed / 3600.0) * 0.1; // Incremento da distância (km) em 100ms
-        rpm = sensor_read_motor_rpm(sensor_pin_a, sensor_pin_b); // Obter RPM do sensor
+        rpm = sensor_read_motor_rpm(sensor_pin_a); // Obter RPM do sensor
 
         // Se o Cruise Control estiver ativado, manter a velocidade configurada
         if (cruise_control_enabled) {
