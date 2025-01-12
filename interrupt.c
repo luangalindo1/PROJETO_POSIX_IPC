@@ -1,5 +1,5 @@
-#include <wiringPi.h>
 #include "interrupt.h"
+#include <wiringPi.h>
 
 /**
  * @brief Configura uma interrupção em um pino GPIO.

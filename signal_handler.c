@@ -1,22 +1,18 @@
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "signal_handler.h"
+#include "basic_def.h"
 #include "motor_control.h"
-#include "pwm.h"
-
 /**
  * @brief Tratador de sinal SIGINT (Ctrl + C) para encerramento seguro.
  *
  * @param signo Número do sinal recebido.
  */
-void handle_sigint(int signo) {
-    if (signo == SIGINT) {
+void handle_sigint(int signal_read) {
+    if (signal_read == SIGINT) {
         printf("\nEncerrando o programa de forma segura...\n");
 
         // Desligar todos os periféricos
-        motor_stop(17, 18, 23); // GPIOs do motor: 17, 18, 23
-
+        motor_stop(MOTOR_DIR1, MOTOR_DIR2, MOTOR_POT); // Desligar o motor
+        
         // Finalizar o programa
         exit(0);
     }

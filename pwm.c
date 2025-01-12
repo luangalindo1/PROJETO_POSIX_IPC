@@ -1,6 +1,6 @@
+#include "pwm.h"
 #include <wiringPi.h>
 #include <softPwm.h>
-#include "pwm.h"
 
 /**
  * @brief Configura um pino GPIO para gerar sinal PWM usando SoftPWM.

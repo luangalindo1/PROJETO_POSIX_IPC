@@ -1,6 +1,6 @@
-#include <wiringPi.h>
-#include "pwm.h"
 #include "motor_control.h"
+#include "pwm.h"
+#include <wiringPi.h>
 
 /**
  * @brief Configura os pinos de direção e potência do motor.

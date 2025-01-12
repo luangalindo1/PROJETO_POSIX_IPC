@@ -1,5 +1,5 @@
-#include <wiringPi.h>
 #include "gpio.h"
+#include <wiringPi.h>
 
 /**
  * @brief Configura um pino GPIO como entrada ou saída.

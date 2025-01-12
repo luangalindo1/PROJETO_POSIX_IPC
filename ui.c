@@ -38,8 +38,8 @@ char ui_get_user_command() {
     char command;
 
     printf("\nCOMANDOS DISPONÍVEIS:\n");
-    printf("A - Aumentar velocidade do Cruise Control\n");
-    printf("D - Diminuir velocidade do Cruise Control\n");
+    printf("A - Aumentar velocidade do Cruise Control em 5 km/h\n");
+    printf("D - Diminuir velocidade do Cruise Control em 5 km/h\n");
     printf("C - Ativar Cruise Control\n");
     printf("X - Desativar Cruise Control\n");
     printf("H - Alternar estado dos faróis\n");
