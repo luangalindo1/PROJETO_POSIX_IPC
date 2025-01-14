@@ -32,9 +32,9 @@ $(EXEC_CONTROLLER): controller.c
 	@echo "[OK] Executável gerado: $@"
 
 # Compilar sensor_sim (inclui libm)
-$(EXEC_SENSOR_SIM): sensor_sim.c
-	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LIBM)
-	@echo "[OK] Executável gerado: $@"
+#$(EXEC_SENSOR_SIM): sensor_sim.c
+#	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LIBM)
+#	@echo "[OK] Executável gerado: $@"
 
 ###############################################################################
 # Regra para Executar os Executáveis em Background com Logs
