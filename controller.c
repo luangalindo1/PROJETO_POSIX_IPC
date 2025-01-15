@@ -287,7 +287,7 @@ double motor_rpm() {
 
     // Cálculo do RPM
     //rpm = (motorPulsos / MOTOR_PULSOS_POR_REVOLUCAO) / deltaTempo * 60.0;
-    rpm = motorPulsos / deltaTempo * 60.0;
+    rpm = motorPulsos / deltaTempo;
     
     // Reset dos pulsos e atualização do tempo
     motorPulsos = 0;
@@ -403,8 +403,8 @@ void init_gpio() {
     // precisamos de um intervalo de 1 ms e
     // uma resolução de 10 bits.
     // Configurando os pinos como saída
-    gpio_pin_setup(MOTOR_POT, OUTPUT);
-    gpio_pin_setup(FREIO_INT, OUTPUT);
+    //gpio_pin_setup(MOTOR_POT, OUTPUT);
+    //gpio_pin_setup(FREIO_INT, OUTPUT);
     if (softPwmCreate(MOTOR_POT, 0, 10) != 0) {
         fprintf(stderr, "Erro ao criar PWM para MOTOR_POT\n");
         exit(EXIT_FAILURE);
