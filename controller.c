@@ -601,12 +601,12 @@ void process_control() {
         if (aux_rpm > 7000) {
             aux_rpm *= 0.9;
             cont_rpm_sup++;
-        } else if (aux_rpm < 800) {
+        } /*else if (aux_rpm < 800) {
             aux_rpm = 0; 
             cont_rpm_inf++;
             printf("\n========= O motor apagou =========\n");
             raise(SIGUSR2);
-        } 
+        }*/ 
         
         if (aux_temp >= MAX_TEMP_MOTOR) {
             printf("\n========= ALERTA DE TEMPERATURA =========\n");
