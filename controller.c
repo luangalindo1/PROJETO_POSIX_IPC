@@ -637,6 +637,9 @@ void process_control() {
                     freioDuty = 0;
                     softPwmWrite(FREIO_INT, freioDuty);
                 }
+
+                digitalWrite(LUZ_FREIO, LOW);
+                
                 // Ajustar direção para frente
                 motor_set_direction('D');
             } else if (strcmp(msg.command, "Acionar Pedal do Freio") == 0) {
@@ -648,18 +651,16 @@ void process_control() {
                     motorDuty = 0;
                     softPwmWrite(MOTOR_POT, motorDuty);
                 }
+
+                digitalWrite(LUZ_FREIO, HIGH);
+                
                 // Setar motor em 'B' (freio ativo)
                 motor_set_direction('B');
             } else if (strcmp(msg.command, "Encerrar") == 0) {
                 raise(SIGUSR2);
             }
         }
-
-        // Calcular RPM e Velocidade reais a partir de motorPulsos / rodaPulsos
-        // Implementar lógica baseada no tempo para converter pulsos em RPM e velocidade
-        // Exemplo simplificado:
-        // Resetar contadores a cada intervalo de tempo e calcular os valores
-
+        
         // Simular tempo de processamento
         sleep(2);
     }
@@ -685,6 +686,8 @@ void cleanup() {
     digitalWrite(FAROL_ALTO, LOW);
     digitalWrite(LUZ_SETA_ESQ, LOW);
     digitalWrite(LUZ_SETA_DIR, LOW);
+    digitalWrite(LUZ_TEMP_MOTOR, LOW);
+    digitalWrite(LUZ_FREIO, LOW);
 
     // Desanexar e remover memória compartilhada
     if (shared_data) {
