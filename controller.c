@@ -154,7 +154,7 @@ void signal_handler(int signal) {
             perror("Erro ao enviar mensagem de encerramento para o Painel");
         }
         running = 0; // Sinaliza para encerrar
-    } else if (sig == SIGINT) {
+    } else if (signal == SIGINT) {
         printf("\nRecebido Ctrl + C (SIGINT). Encerrando...\n");
         
         // Enviar "Encerrar" ao painel também
@@ -334,6 +334,8 @@ double velocidade() {
     // Cálculo das velocidades individuais
     velocidade_a = rodaPulsos_a / deltaTempo_a;
     velocidade_b = rodaPulsos_b / deltaTempo_b;
+
+    velocidade_kmh = ((velocidade_a + velocidade_b) / 2.0);
 
     // Reset dos pulsos e atualização do tempo
     rodaPulsos_a = 0;
@@ -519,7 +521,7 @@ void process_control() {
         clock_gettime(CLOCK_MONOTONIC, &ultimoTempoRoda_b);
         clock_gettime(CLOCK_MONOTONIC, &ultimoTempoMotor);
         aux_vel = velocidade();
-        aux_rpm = rpm();
+        aux_rpm = motor_rpm();
 
 
         // Regras de limite
