@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <math.h>
+#include <time.h>
 
 // >>> Adicionados para GPIO e PWM <<<
 #include <wiringPi.h>
@@ -66,8 +67,12 @@
 #define BASE_TEMP 80
 
 // Definições de outras constantes
-#define FREQ_PWM 1 // kHz
-#define PERIOD_PWM (1 / FREQ_PWM) // ms
+//#define FREQ_PWM 1 // kHz
+//#define PERIOD_PWM (1 / FREQ_PWM) // ms
+//#define MOTOR_PULSOS_POR_REVOLUCAO 1   // Pulsos por volta completa do motor (1:1 no sensor Hall)
+//#define RAIO_RODA 0.3                  // Raio da roda em metros
+//#define PULSOS_POR_REVOLUCAO_RODA 1    // Pulsos por volta completa da roda (1:1 no sensor Hall)
+//#define PI 3.141592653589793           // Valor de PI
 
 // Estrutura para os dados dos sensores
 typedef struct {
@@ -97,8 +102,13 @@ sem_t *sem_sync;
 volatile sig_atomic_t running = 1; 
 
 // Variáveis para PWM e Contadores
-static int motorDuty = 0;   // Duty cycle motor (0-100)
-static int freioDuty = 0;   // Duty cycle freio (0-100)
+static int motorDuty = 0;   // Duty cycle motor (0-10)
+static int freioDuty = 0;   // Duty cycle freio (0-10)
+
+// Tempo de referência
+struct timespec ultimoTempoMotor;
+struct timespec ultimoTempoRoda_a;
+struct timespec ultimoTempoRoda_b;
 
 // Contadores para sensor Hall (RPM, velocidade)
 static volatile unsigned long motorPulsos = 0;  
@@ -144,12 +154,7 @@ void signal_handler(int signal) {
             perror("Erro ao enviar mensagem de encerramento para o Painel");
         }
         running = 0; // Sinaliza para encerrar
-    }
-}
-
-// Tratamento de SIGINT para desligar PWM e GPIO <<<
-void sigint_handler_custom(int sig) {
-    if (sig == SIGINT) {
+    } else if (sig == SIGINT) {
         printf("\nRecebido Ctrl + C (SIGINT). Encerrando...\n");
         
         // Enviar "Encerrar" ao painel também
@@ -162,6 +167,7 @@ void sigint_handler_custom(int sig) {
 
         running = 0;
     }
+    
 }
 
 void setup_signals() {
@@ -176,14 +182,8 @@ void setup_signals() {
     if (sigaction(SIGUSR2, &sa, NULL) == -1) {
         perror("Erro ao ativar handler SIGUSR2");
         exit(EXIT_FAILURE);
-    }
-
-    // Adicionar SIGINT com outro handler
-    struct sigaction sa_int;
-    sa_int.sa_handler = sigint_handler_custom;
-    sa_int.sa_flags = SA_RESTART;
-    sigemptyset(&sa_int.sa_mask);
-    if (sigaction(SIGINT, &sa_int, NULL) == -1) {
+    } 
+    if (sigaction(SIGINT, &sa, NULL) == -1) {
         perror("Erro ao ativar handler SIGINT");
         exit(EXIT_FAILURE);
     }
@@ -273,6 +273,78 @@ float calculate_engine_temp(float velocidade, int rpm) {
     return (float)fmin(MAX_TEMP_MOTOR, temp);
 }
 
+double motor_rpm() {
+    struct timespec tempoAtual;
+    clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
+    double deltaTempo = 0.0;
+    double rpm = 0.0;
+
+    // Tempo decorrido desde a última medição
+    deltaTempo = (tempoAtual.tv_sec - ultimoTempoMotor.tv_sec) +
+                        (tempoAtual.tv_nsec - ultimoTempoMotor.tv_nsec) / 1e9;
+
+    if (deltaTempo == 0) return 0.0; // Evitar divisão por zero
+
+    // Cálculo do RPM
+    //rpm = (motorPulsos / MOTOR_PULSOS_POR_REVOLUCAO) / deltaTempo * 60.0;
+    rpm = motorPulsos / deltaTempo * 60.0;
+    
+    // Reset dos pulsos e atualização do tempo
+    motorPulsos = 0;
+    ultimoTempoMotor = tempoAtual;
+
+    return rpm;
+}
+
+double velocidade() {
+    struct timespec tempoAtual;
+    clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
+    double deltaTempo_a = 0.0;
+    double deltaTempo_b = 0.0;
+    double velocidade_kmh = 0.0;
+    //double velocidade_ms_a = 0.0;
+    //double velocidade_ms_b = 0.0;
+    double velocidade_a = 0.0;
+    double velocidade_b = 0.0;
+
+    // Tempo decorrido desde a última medição
+    deltaTempo_a = (tempoAtual.tv_sec - ultimoTempoRoda_a.tv_sec) +
+                        (tempoAtual.tv_nsec - ultimoTempoRoda_a.tv_nsec) / 1e9;
+    deltaTempo_b = (tempoAtual.tv_sec - ultimoTempoRoda_b.tv_sec) +
+                        (tempoAtual.tv_nsec - ultimoTempoRoda_b.tv_nsec) / 1e9;
+
+    // Evitar divisão por zero
+    if ((deltaTempo_a == 0) || (deltaTempo_b == 0)) return 0.0; 
+
+    /*
+    Como não estamos utilizando informações de raio ou perímetro, 
+    o valor da velocidade será uma unidade arbitrária proporcional ao número de pulsos por segundo.
+    
+    // Cálculo da velocidade linear
+    velocidade_msa = (rodaPulsos_a / PULSOS_POR_REVOLUCAO_RODA) * 
+                          (2 * PI * RAIO_RODA) / deltaTempo;
+
+    velocidade_msb = (rodaPulsos_b / PULSOS_POR_REVOLUCAO_RODA) * 
+                          (2 * PI * RAIO_RODA) / deltaTempo;
+
+    // Conversão de m/s para km/h
+    velocidade_kmh = ((velocidade_msa + velocidade_msb) / 2.0) * 3.6;
+    */
+    
+    // Cálculo das velocidades individuais
+    velocidade_a = rodaPulsos_a / deltaTempo_a;
+    velocidade_b = rodaPulsos_b / deltaTempo_b;
+
+    // Reset dos pulsos e atualização do tempo
+    rodaPulsos_a = 0;
+    rodaPulsos_b = 0;
+    ultimoTempoRoda_a = tempoAtual;
+    ultimoTempoRoda_b = tempoAtual;
+
+    return velocidade_kmh;
+}
+
+
 // --------------------------
 // 7. GPIO e PWM
 // --------------------------
@@ -304,7 +376,8 @@ void gpio_pin_setup(int pin, int direction) {
         pinMode(pin, OUTPUT);
     } else if (direction == INPUT) {
         pinMode(pin, INPUT);
-        pullUpDnControl(pin, PUD_OFF); // Sem resistor de pull-up ou pull-down por padrão
+        // Sem resistor de pull-up ou pull-down por padrão
+        pullUpDnControl(pin, PUD_OFF); 
     }
 }
 
@@ -323,11 +396,11 @@ void init_gpio() {
     gpio_pin_setup(PEDAL_AC, INPUT);
     gpio_pin_setup(PEDAL_FR, INPUT);
 
-    // Configurar PWM do motor e do freio
+    // Configurar PWM do motor e do freio:
     // Para garantir que o PWM funcione em 1 kHz,
     // precisamos de um intervalo de 1 ms e
-    // uma resolução de 10 bits
-    // Configura os pinos como saída
+    // uma resolução de 10 bits.
+    // Configurando os pinos como saída
     gpio_pin_setup(MOTOR_POT, OUTPUT);
     gpio_pin_setup(FREIO_INT, OUTPUT);
     if (softPwmCreate(MOTOR_POT, 0, 10) != 0) {
@@ -428,6 +501,7 @@ void process_control() {
         float aux_vel, aux_temp;
         int aux_rpm;
 
+        // Obter dados da memória
         sem_wait(sem_sync);
         aux_vel = shared_data->velocidade;
         aux_rpm = shared_data->rpm;
@@ -439,6 +513,14 @@ void process_control() {
         printf("Velocidade: %.1f km/h\n", aux_vel);
         printf("RPM: %d\n", aux_rpm);
         printf("Temperatura: %.2f ºC\n", aux_temp);
+
+        // Atualizar velocidade e RPM
+        clock_gettime(CLOCK_MONOTONIC, &ultimoTempoRoda_a);
+        clock_gettime(CLOCK_MONOTONIC, &ultimoTempoRoda_b);
+        clock_gettime(CLOCK_MONOTONIC, &ultimoTempoMotor);
+        aux_vel = velocidade();
+        aux_rpm = rpm();
+
 
         // Regras de limite
         if (aux_vel > 200.0) {
@@ -462,8 +544,8 @@ void process_control() {
         if (aux_temp >= MAX_TEMP_MOTOR) {
             printf("\n========= ALERTA DE TEMPERATURA =========\n");
             cont_max_temp++;
-            aux_vel *= 0.9;
-            aux_rpm *= 0.9;
+            //aux_vel *= 0.9;
+            //aux_rpm *= 0.9;
             digitalWrite(LUZ_TEMP_MOTOR, HIGH);
         } else {
             digitalWrite(LUZ_TEMP_MOTOR, LOW);
@@ -495,76 +577,78 @@ void process_control() {
                 sem_wait(sem_sync);
                 status_trigg->seta_esq = true;
                 sem_post(sem_sync);
-            }
-            else if (strcmp(msg.command, "Desligar Seta Esquerda") == 0) {
+            } else if (strcmp(msg.command, "Desligar Seta Esquerda") == 0) {
                 sem_wait(sem_sync);
                 status_trigg->seta_esq = false;
                 sem_post(sem_sync);
-            }
-            else if (strcmp(msg.command, "Ligar Seta Direita") == 0) {
+            } else if (strcmp(msg.command, "Ligar Seta Direita") == 0) {
                 sem_wait(sem_sync);
                 status_trigg->seta_dir = true;
                 sem_post(sem_sync);
-            }
-            else if (strcmp(msg.command, "Desligar Seta Direita") == 0) {
+            } else if (strcmp(msg.command, "Desligar Seta Direita") == 0) {
                 sem_wait(sem_sync);
                 status_trigg->seta_dir = false;
                 sem_post(sem_sync);
-            }
-            else if (strcmp(msg.command, "Ligar Farol Baixo") == 0) {
+            } else if (strcmp(msg.command, "Ligar Pisca-Alerta") == 0) {
+                sem_wait(sem_sync);
+                status_trigg->seta_esq= true;
+                status_trigg->seta_dir = true;
+                sem_post(sem_sync);
+            } else if (strcmp(msg.command, "Desligar Pisca-Alerta") == 0) {
+                sem_wait(sem_sync);
+                status_trigg->seta_esq = false;
+                status_trigg->seta_dir = false;
+                sem_post(sem_sync);
+            } else if (strcmp(msg.command, "Ligar Farol Baixo") == 0) {
                 digitalWrite(FAROL_BAIXO, HIGH);
                 sem_wait(sem_sync);
                 status_trigg->farol_baixo = true;
                 sem_post(sem_sync);
-            }
-            else if (strcmp(msg.command, "Desligar Farol Baixo") == 0) {
+            } else if (strcmp(msg.command, "Desligar Farol Baixo") == 0) {
                 digitalWrite(FAROL_BAIXO, LOW);
                 sem_wait(sem_sync);
                 status_trigg->farol_baixo = false;
                 sem_post(sem_sync);
-            }
-            else if (strcmp(msg.command, "Ligar Farol Alto") == 0) {
+            } else if (strcmp(msg.command, "Ligar Farol Alto") == 0) {
                 digitalWrite(FAROL_ALTO, HIGH);
                 sem_wait(sem_sync);
                 status_trigg->farol_alto = true;
                 sem_post(sem_sync);
-            }
-            else if (strcmp(msg.command, "Desligar Farol Alto") == 0) {
+            } else if (strcmp(msg.command, "Desligar Farol Alto") == 0) {
                 digitalWrite(FAROL_ALTO, LOW);
                 sem_wait(sem_sync);
                 status_trigg->farol_alto = false;
                 sem_post(sem_sync);
-            }
-            else if (strcmp(msg.command, "Desligar Farol") == 0) {
+            } else if (strcmp(msg.command, "Desligar Farol") == 0) {
                 digitalWrite(FAROL_BAIXO, LOW);
                 digitalWrite(FAROL_ALTO, LOW);
                 sem_wait(sem_sync);
                 status_trigg->farol_baixo = false;
                 status_trigg->farol_alto = false;
                 sem_post(sem_sync);
-            }
-            else if (strcmp(msg.command, "Acionar Pedal do Acelerador") == 0) {
+            } else if (strcmp(msg.command, "Acionar Pedal do Acelerador") == 0) {
                 // Aumentar duty cycle do motor
                 if (motorDuty < 10) motorDuty += 1; 
                 if (motorDuty > 10) motorDuty = 10;
                 softPwmWrite(MOTOR_POT, motorDuty);
-                if (freioDuty != 0) freioDuty = 0;
-                
-
+                if (freioDuty != 0) {
+                    freioDuty = 0;
+                    softPwmWrite(FREIO_INT, freioDuty);
+                }
                 // Ajustar direção para frente
                 motor_set_direction('D');
-            }
-            else if (strcmp(msg.command, "Acionar Pedal do Freio") == 0) {
+            } else if (strcmp(msg.command, "Acionar Pedal do Freio") == 0) {
                 // Aumentar duty cycle do freio
                 if (freioDuty < 10) freioDuty += 1;
                 if (freioDuty > 10) freioDuty = 10;
                 softPwmWrite(FREIO_INT, freioDuty);
-                if (motorDuty != 0) motorDuty = 0;
-
-                // Opcional: setar motor em 'B' (freio ativo)
-                // motor_set_direction('B');
-            }
-            else if (strcmp(msg.command, "Encerrar") == 0) {
+                if (motorDuty != 0) {
+                    motorDuty = 0;
+                    softPwmWrite(MOTOR_POT, motorDuty);
+                }
+                // Setar motor em 'B' (freio ativo)
+                motor_set_direction('B');
+            } else if (strcmp(msg.command, "Encerrar") == 0) {
                 raise(SIGUSR2);
             }
         }

@@ -23,15 +23,17 @@ void display_menu() {
     printf("\n==== PAINEL DE COMANDOS ====\n");
     printf("1  - Ligar Seta Esquerda\n");
     printf("2  - Ligar Seta Direita\n");
-    printf("3  - Ligar Farol Baixo\n");
-    printf("4  - Ligar Farol Alto\n");
-    printf("5  - Acionar Pedal do Acelerador\n");
-    printf("6  - Acionar Pedal do Freio\n");
-    printf("7  - Desligar Seta Esquerda\n");
-    printf("8  - Desligar Seta Direita\n");
-    printf("9  - Desligar Farol Baixo\n");
-    printf("10 - Desligar Farol Alto\n");
-    printf("11 - Desligar Farol (ambos)\n");
+    printf("3  - Ligar Pisca-Alerta\n");
+    printf("4  - Ligar Farol Baixo\n");
+    printf("5  - Ligar Farol Alto\n");
+    printf("6  - Acionar Pedal do Acelerador\n");
+    printf("7  - Acionar Pedal do Freio\n");
+    printf("8  - Desligar Seta Esquerda\n");
+    printf("9  - Desligar Seta Direita\n");
+    printf("10 - Desligar Pisca-Alerta\n");
+    printf("11 - Desligar Farol Baixo\n");
+    printf("12 - Desligar Farol Alto\n");
+    printf("13 - Desligar Farol (ambos)\n");
     printf("0  - Sair\n");
     printf("Escolha uma opção: ");
 }
@@ -119,48 +121,54 @@ int main() {
         msg.msg_type = 1;
 
         switch (option) {
-            case 1:
-                strcpy(msg.command, "Ligar Seta Esquerda");
-                break;
-            case 2:
-                strcpy(msg.command, "Ligar Seta Direita");
-                break;
-            case 3:
-                strcpy(msg.command, "Ligar Farol Baixo");
-                break;
-            case 4:
-                strcpy(msg.command, "Ligar Farol Alto");
-                break;
-            case 5:
-                strcpy(msg.command, "Acionar Pedal do Acelerador");
-                break;
-            case 6:
-                strcpy(msg.command, "Acionar Pedal do Freio");
-                break;
-            case 7:
-                strcpy(msg.command, "Desligar Seta Esquerda");
-                break;
-            case 8:
-                strcpy(msg.command, "Desligar Seta Direita");
-                break;
-            case 9:
-                strcpy(msg.command, "Desligar Farol Baixo");
-                break;
-            case 10:
-                strcpy(msg.command, "Desligar Farol Alto");
-                break;
-            case 11:
-                strcpy(msg.command, "Desligar Farol");
-                break;
-            case 0:
-                printf("Encerrando Painel de Comandos...\n");
-                printf("Encerrando controlador...\n\n");
-                strcpy(msg.command, "Encerrar");
-                send_message(msg);
-                return 0;
-            default:
-                printf("Opção inválida. Tente novamente.\n");
-                continue;
+        case 1:
+            strcpy(msg.command, "Ligar Seta Esquerda");
+            break;
+        case 2:
+            strcpy(msg.command, "Ligar Seta Direita");
+            break;
+        case 3:
+            strcpy(msg.command, "Ligar Pisca-Alerta");
+            break;
+        case 4:
+            strcpy(msg.command, "Ligar Farol Baixo");
+            break;
+        case 5:
+            strcpy(msg.command, "Ligar Farol Alto");
+            break;
+        case 6:
+            strcpy(msg.command, "Acionar Pedal do Acelerador");
+            break;
+        case 7:
+            strcpy(msg.command, "Acionar Pedal do Freio");
+            break;
+        case 8:
+            strcpy(msg.command, "Desligar Seta Esquerda");
+            break;
+        case 9:
+            strcpy(msg.command, "Desligar Seta Direita");
+            break;
+        case 10:
+            strcpy(msg.command, "Desligar Pisca-Alerta");
+            break;
+        case 11:
+            strcpy(msg.command, "Desligar Farol Baixo");
+            break;
+        case 12:
+            strcpy(msg.command, "Desligar Farol Alto");
+            break;
+        case 13:
+            strcpy(msg.command, "Desligar Farol");
+            break;
+        case 0:
+            printf("Encerrando Painel de Comandos...\n");
+            printf("Encerrando controlador...\n\n");
+            strcpy(msg.command, "Encerrar");
+            send_message(msg);
+            return 0;
+        default:
+            printf("Opção inválida. Tente novamente.\n");
+            continue;
         }
 
         // Enviar a mensagem com o comando escolhido
