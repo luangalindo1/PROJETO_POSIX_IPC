@@ -293,7 +293,7 @@ int motor_rpm() {
     deltaTempo = (tempoAtual.tv_sec - ultimoTempoMotor.tv_sec) +
                         (tempoAtual.tv_nsec - ultimoTempoMotor.tv_nsec) / 1e9;
 
-    if (deltaTempo < 1e-3) return 0; // Evitar divisão por zero
+    if (deltaTempo < 1e-4) return 0; // Evitar divisão por zero
 
     // Cálculo do RPM
     //rpm = (motorPulsos / MOTOR_PULSOS_POR_REVOLUCAO) / deltaTempo * 60.0;
