@@ -132,7 +132,7 @@ void motor_hall_callback(void) {
 
     double delta = (tempoAtual.tv_sec - ultimoPulso.tv_sec) +
                    (tempoAtual.tv_nsec - ultimoPulso.tv_nsec) / 1e9;
-    if (delta > 0.001) { // Filtro de debounce: 1ms
+    if (delta > 0.0001) { // Filtro de debounce: 0,1ms
         motorPulsos++;
         ultimoPulso = tempoAtual;
     }
