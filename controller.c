@@ -273,7 +273,7 @@ float calculate_engine_temp(float velocidade, int rpm) {
     return (float)fmin(MAX_TEMP_MOTOR, temp);
 }
 
-double motor_rpm() {
+int motor_rpm() {
     struct timespec tempoAtual;
     clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
     double deltaTempo = 0.0;
@@ -293,10 +293,10 @@ double motor_rpm() {
     motorPulsos = 0;
     ultimoTempoMotor = tempoAtual;
 
-    return rpm;
+    return (int)rpm;
 }
 
-double velocidade() {
+float velocidade() {
     struct timespec tempoAtual;
     clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
     double deltaTempo_a = 0.0;
@@ -343,7 +343,7 @@ double velocidade() {
     ultimoTempoRoda_a = tempoAtual;
     ultimoTempoRoda_b = tempoAtual;
 
-    return velocidade_kmh;
+    return (float)velocidade_kmh;
 }
 
 
