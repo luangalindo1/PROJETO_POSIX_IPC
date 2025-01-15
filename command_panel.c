@@ -1,9 +1,3 @@
-/**
- * command_panel.c
- *
- * Versão adaptada para verificar o retorno de scanf e tratar entradas inválidas.
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

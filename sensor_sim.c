@@ -1,10 +1,3 @@
-/**
- * sensor_sim.c
- *
- * Versão corrigida para silenciar warnings de parâmetros não utilizados e
- * linkagem correta com a biblioteca matemática.
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>

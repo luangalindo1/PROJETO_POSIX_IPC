@@ -1,55 +1,44 @@
-###############################################################################
-# Makefile para Compilação e Execução Automática em Ambiente Headless
-###############################################################################
+### MAKE SEM EXECUÇÃO AUTOMÁTICA ###
 
-# Variáveis de Compilação
-CC        = gcc
-CFLAGS    = -Wall -Wextra -O2
-LDFLAGS   = -pthread -lrt
-WIRINGPI  = -lwiringPi
-LIBM      = -lm
-
-# Executáveis
-EXEC_COMMAND_PANEL = command_panel
-EXEC_CONTROLLER    = controller
-
-# Alvo Padrão
-all: $(EXEC_COMMAND_PANEL) $(EXEC_CONTROLLER)
 
 ###############################################################################
-# Regras de Compilação
+# Variáveis de compilação
 ###############################################################################
+CC       = gcc
+CFLAGS   = -Wall -Wextra -O2
+LDFLAGS  = -pthread -lrt   # Precisamos de -pthread para threads e -lrt para semáforos POSIX
 
-# Compilar command_panel
-$(EXEC_COMMAND_PANEL): command_panel.c
+# Somente o controller precisa WiringPi (GPIO, PWM).
+WIRINGPI = -lwiringPi
+LIBM     = -lm
+
+###############################################################################
+# Alvos (executáveis)
+###############################################################################
+all: command_panel controller sensor_sim
+
+# Painel de comando
+command_panel: command_panel.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
-	@echo "[OK] Executável gerado: $@"
+	@echo "[OK] Gerado executável: $@"
 
-# Compilar controller (usa WiringPi e libm)
-$(EXEC_CONTROLLER): controller.c
+# Controlador (usa WiringPi)
+controller: controller.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(WIRINGPI) $(LIBM)
-	@echo "[OK] Executável gerado: $@"
+	@echo "[OK] Gerado executável: $@"
+
+# Simulador de sensores
+sensor_sim: sensor_sim.c
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LIBM)
+	@echo "[OK] Gerado executável: $@"
 
 ###############################################################################
-# Regra para Executar os Executáveis em Background com Logs
+# Limpeza
 ###############################################################################
-
-run: all
-	@echo "Executando executáveis em background..."
-	@./$(EXEC_COMMAND_PANEL) > command_panel.log 2>&1 &
-	@./$(EXEC_CONTROLLER) > controller.log 2>&1 &
-	@echo "Executáveis rodando em background. Logs: command_panel.log, controller.log"
-
-###############################################################################
-# Regra de Limpeza
-###############################################################################
-
 clean:
-	rm -f $(EXEC_COMMAND_PANEL) $(EXEC_CONTROLLER) command_panel.log controller.log
+	rm -f command_panel controller sensor_sim
 	@echo "[OK] Limpeza concluída."
 
 ###############################################################################
-# Declaração de Alvos Falsos
+# Fim do Makefile
 ###############################################################################
-
-.PHONY: all run clean

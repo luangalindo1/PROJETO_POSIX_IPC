@@ -1,10 +1,3 @@
-/**
- * controller.c
- *
- * Versão corrigida para evitar erros de compilação relacionados à definição incorreta
- * da função 'main' e parâmetros não utilizados.
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -29,28 +22,52 @@
 #define SHM_KEY_TRIGGERS 4321
 #define MSG_KEY 5678
 
-// >>> Ajustar conforme o seu diagrama de hardware <<<
-#define MOTOR_DIR1 17  // GPIO 17 (BCM)
-#define MOTOR_DIR2 18  // GPIO 18 (BCM)
-#define MOTOR_POT 23   // GPIO 23 (BCM) -> PWM para motor
-#define FREIO_INT 24   // GPIO 24 (BCM) -> PWM para freio
+// Definições de pinos para os componentes
 
-// Exemplo de pinos de faróis e setas
-#define FAROL_BAIXO 19
-#define FAROL_ALTO  26
-#define LUZ_SETA_ESQ 8
-#define LUZ_SETA_DIR 7
+// Direção
+#define MOTOR_DIR1 17 // Direção 1 (OUT)
+#define MOTOR_DIR2 18 // Direção 2 (OUT)
+
+// Motor
+#define MOTOR_POT 23 // Potência do Motor (PWM) (OUT)
+
+// Pedais
+#define FREIO_INT 24 // Intensidade do Pedal de Freio (PWM) (OUT)
+#define PEDAL_AC 27  // Pedal do Acelerador (IN)
+#define PEDAL_FR 22  // Pedal do Freio (IN)
 
 // Sensores Hall
-#define SENSOR_HALL_MOTOR 11
-#define SENSOR_HALL_RODA_A 5
-#define SENSOR_HALL_RODA_B 6
+#define SENSOR_HALL_MOTOR 11      // Sensor Hall do Motor (IN)
+#define SENSOR_HALL_RODA_A 5      // Sensor Hall da Roda A (IN)
+#define SENSOR_HALL_RODA_B 6      // Sensor Hall da Roda B (IN)
+
+// Faróis e luzes
+#define FAROL_BAIXO 19           // Luzes de Farol Baixo (OUT)
+#define FAROL_ALTO 26            // Luzes de Farol Alto (OUT)
+#define LUZ_FREIO 25             // Luzes de Freio (OUT)
+#define LUZ_SETA_ESQ 8           // Luz da Seta Esquerda (OUT)
+#define LUZ_SETA_DIR 7           // Luz da Seta Direita (OUT)
+#define LUZ_TEMP_MOTOR 12        // Luz de Alerta da Temperatura do Motor (OUT)
+
+// Comandos
+#define COMANDO_FAROL 16         // Comando de Ligar/Desligar Farol (IN)
+#define COMANDO_FAROL_ALTO 1     // Comando de Ligar/Desligar Farol Alto (IN)
+#define COMANDO_SETA_ESQ 20      // Comando de Ligar/Desligar Seta Esquerda (IN)
+#define COMANDO_SETA_DIR 21      // Comando de Ligar/Desligar Seta Direita (IN)
+
+/*// Cruise Control
+#define CC_RES 13                // Comando de Cruise Control (IN)
+#define CC_CANCEL 0*/              // Comando de Cancelar Cruise Control (IN)
 
 // Definições de constantes para cálculo de temperatura
-#define FACTOR_ACELERACAO 0.1 
+#define FATOR_ACELERACAO 0.1 
 #define FATOR_RESFRIAMENTO_AR 0.05
 #define MAX_TEMP_MOTOR 140
 #define BASE_TEMP 80
+
+// Definições de outras constantes
+#define FREQ_PWM 1 // kHz
+#define PERIOD_PWM (1 / FREQ_PWM) // ms
 
 // Estrutura para os dados dos sensores
 typedef struct {
@@ -79,15 +96,16 @@ int msg_queue_id;
 sem_t *sem_sync;
 volatile sig_atomic_t running = 1; 
 
-// >>> Variáveis para PWM e Contadores <<<
+// Variáveis para PWM e Contadores
 static int motorDuty = 0;   // Duty cycle motor (0-100)
 static int freioDuty = 0;   // Duty cycle freio (0-100)
 
 // Contadores para sensor Hall (RPM, velocidade)
 static volatile unsigned long motorPulsos = 0;  
-static volatile unsigned long rodaPulsos = 0;   
+static volatile unsigned long rodaPulsos_a = 0;
+static volatile unsigned long rodaPulsos_b = 0;   
 
-// >>> Relatórios (do seu código original) <<<
+// Contadores para relatório de acionamentos
 int cont_vel_sup = 0;
 int cont_vel_inf = 0;
 int cont_rpm_sup = 0;
@@ -102,7 +120,10 @@ void motor_hall_callback(void) {
 }
 
 void roda_a_hall_callback(void) {
-    rodaPulsos++;
+    rodaPulsos_a++;
+}
+void roda_b_hall_callback(void) {
+    rodaPulsos_b++;
 }
 
 // --------------------------
@@ -126,7 +147,7 @@ void signal_handler(int signal) {
     }
 }
 
-// >>> Novo: tratar SIGINT para desligar PWM e GPIO <<<
+// Tratamento de SIGINT para desligar PWM e GPIO <<<
 void sigint_handler_custom(int sig) {
     if (sig == SIGINT) {
         printf("\nRecebido Ctrl + C (SIGINT). Encerrando...\n");
@@ -149,11 +170,11 @@ void setup_signals() {
     sa.sa_flags = SA_RESTART;
     sigemptyset(&sa.sa_mask);
     if (sigaction(SIGUSR1, &sa, NULL) == -1) {
-        perror("Erro ao instalar handler SIGUSR1");
+        perror("Erro ao ativar handler SIGUSR1");
         exit(EXIT_FAILURE);
     }
     if (sigaction(SIGUSR2, &sa, NULL) == -1) {
-        perror("Erro ao instalar handler SIGUSR2");
+        perror("Erro ao ativar handler SIGUSR2");
         exit(EXIT_FAILURE);
     }
 
@@ -163,7 +184,7 @@ void setup_signals() {
     sa_int.sa_flags = SA_RESTART;
     sigemptyset(&sa_int.sa_mask);
     if (sigaction(SIGINT, &sa_int, NULL) == -1) {
-        perror("Erro ao instalar handler SIGINT");
+        perror("Erro ao ativar handler SIGINT");
         exit(EXIT_FAILURE);
     }
 }
@@ -246,7 +267,7 @@ void init_semaphore() {
 // 6. Cálculo de Temperatura
 // --------------------------
 float calculate_engine_temp(float velocidade, int rpm) {
-    float temp_rise = (rpm / 10.0) * FACTOR_ACELERACAO;
+    float temp_rise = (rpm / 10.0) * FATOR_ACELERACAO;
     float cooling_effect = velocidade * FATOR_RESFRIAMENTO_AR;
     float temp = BASE_TEMP + temp_rise - cooling_effect;
     return (float)fmin(MAX_TEMP_MOTOR, temp);
@@ -278,6 +299,15 @@ void motor_set_direction(char direction) {
     }
 }
 
+void gpio_pin_setup(int pin, int direction) {
+    if (direction == OUTPUT) {
+        pinMode(pin, OUTPUT);
+    } else if (direction == INPUT) {
+        pinMode(pin, INPUT);
+        pullUpDnControl(pin, PUD_OFF); // Sem resistor de pull-up ou pull-down por padrão
+    }
+}
+
 void init_gpio() {
     // Inicializar WiringPi (modo BCM)
     if (wiringPiSetupGpio() < 0) {
@@ -286,47 +316,54 @@ void init_gpio() {
     }
 
     // Configurar pinos de direção do motor
-    pinMode(MOTOR_DIR1, OUTPUT);
-    pinMode(MOTOR_DIR2, OUTPUT);
+    gpio_pin_setup(MOTOR_DIR1, INPUT);
+    gpio_pin_setup(MOTOR_DIR2, INPUT);
+
+    // Configurar pinos dos pedais
+    gpio_pin_setup(PEDAL_AC, INPUT);
+    gpio_pin_setup(PEDAL_FR, INPUT);
 
     // Configurar PWM do motor e do freio
-    // softPwmCreate(pino, valor_inicial, range)
-    // 'range' ~ 100 => duty cycle 0-100
-    if (softPwmCreate(MOTOR_POT, 0, 100) != 0) {
+    // Para garantir que o PWM funcione em 1 kHz,
+    // precisamos de um intervalo de 1 ms e
+    // uma resolução de 10 bits
+    // Configura os pinos como saída
+    gpio_pin_setup(MOTOR_POT, OUTPUT);
+    gpio_pin_setup(FREIO_INT, OUTPUT);
+    if (softPwmCreate(MOTOR_POT, 0, 10) != 0) {
         fprintf(stderr, "Erro ao criar PWM para MOTOR_POT\n");
         exit(EXIT_FAILURE);
     }
-    if (softPwmCreate(FREIO_INT, 0, 100) != 0) {
+    if (softPwmCreate(FREIO_INT, 0, 10) != 0) {
         fprintf(stderr, "Erro ao criar PWM para FREIO_INT\n");
         exit(EXIT_FAILURE);
     }
 
     // Faróis / Seta (saídas digitais)
-    pinMode(FAROL_BAIXO, OUTPUT);
-    pinMode(FAROL_ALTO, OUTPUT);
-    pinMode(LUZ_SETA_ESQ, OUTPUT);
-    pinMode(LUZ_SETA_DIR, OUTPUT);
+    gpio_pin_setup(FAROL_BAIXO, OUTPUT);
+    gpio_pin_setup(FAROL_ALTO, OUTPUT);
+    gpio_pin_setup(LUZ_SETA_ESQ, OUTPUT);
+    gpio_pin_setup(LUZ_SETA_DIR, OUTPUT);
 
+    // Luzes (saídas digitais)
+    gpio_pin_setup(LUZ_FREIO, OUTPUT);
+    gpio_pin_setup(LUZ_TEMP_MOTOR, OUTPUT);
+    
     // Sensores Hall (entradas)
-    pinMode(SENSOR_HALL_MOTOR, INPUT);
-    pinMode(SENSOR_HALL_RODA_A, INPUT);
-    pinMode(SENSOR_HALL_RODA_B, INPUT);
-
-    // Puxar para baixo (pull-down) se necessário
-    pullUpDnControl(SENSOR_HALL_MOTOR, PUD_DOWN);
-    pullUpDnControl(SENSOR_HALL_RODA_A, PUD_DOWN);
-    pullUpDnControl(SENSOR_HALL_RODA_B, PUD_DOWN);
-
+    gpio_pin_setup(SENSOR_HALL_MOTOR, INPUT);
+    gpio_pin_setup(SENSOR_HALL_RODA_A, INPUT);
+    gpio_pin_setup(SENSOR_HALL_RODA_B, INPUT);
+    
     // Configurar interrupções para sensor Hall
     wiringPiISR(SENSOR_HALL_MOTOR, INT_EDGE_RISING, &motor_hall_callback);
     wiringPiISR(SENSOR_HALL_RODA_A, INT_EDGE_RISING, &roda_a_hall_callback);
-    // SENSOR_HALL_RODA_B poderia ser usado para detectar direção
+    wiringPiISR(SENSOR_HALL_RODA_B, INT_EDGE_RISING, &roda_b_hall_callback);
 
-    printf("GPIO inicializados.\n");
+    printf("GPIO inicializada.\n");
 }
 
 // --------------------------
-// 8. Thread para Piscar Setas
+// 8. Threads para Piscar Setas
 // --------------------------
 void *threadPiscaSetaEsq(void *arg) {
     (void)arg; // Silenciar warning de parâmetro não utilizado
@@ -412,7 +449,7 @@ void process_control() {
             cont_vel_inf++;
         }
 
-        if (aux_rpm > 8000) {
+        if (aux_rpm > 7000) {
             aux_rpm *= 0.9;
             cont_rpm_sup++;
         } else if (aux_rpm < 800) {
@@ -420,11 +457,16 @@ void process_control() {
             cont_rpm_inf++;
             printf("\n========= O motor apagou =========\n");
             raise(SIGUSR2);
-        } else if (aux_temp >= 140.0) {
+        } 
+        
+        if (aux_temp >= MAX_TEMP_MOTOR) {
             printf("\n========= ALERTA DE TEMPERATURA =========\n");
             cont_max_temp++;
             aux_vel *= 0.9;
             aux_rpm *= 0.9;
+            digitalWrite(LUZ_TEMP_MOTOR, HIGH);
+        } else {
+            digitalWrite(LUZ_TEMP_MOTOR, LOW);
         }
 
         // Atualizar memória
@@ -503,18 +545,21 @@ void process_control() {
             }
             else if (strcmp(msg.command, "Acionar Pedal do Acelerador") == 0) {
                 // Aumentar duty cycle do motor
-                if (motorDuty < 100) motorDuty += 10; 
-                if (motorDuty > 100) motorDuty = 100;
+                if (motorDuty < 10) motorDuty += 1; 
+                if (motorDuty > 10) motorDuty = 10;
                 softPwmWrite(MOTOR_POT, motorDuty);
+                if (freioDuty != 0) freioDuty = 0;
+                
 
                 // Ajustar direção para frente
                 motor_set_direction('D');
             }
             else if (strcmp(msg.command, "Acionar Pedal do Freio") == 0) {
                 // Aumentar duty cycle do freio
-                if (freioDuty < 100) freioDuty += 10;
-                if (freioDuty > 100) freioDuty = 100;
+                if (freioDuty < 10) freioDuty += 1;
+                if (freioDuty > 10) freioDuty = 10;
                 softPwmWrite(FREIO_INT, freioDuty);
+                if (motorDuty != 0) motorDuty = 0;
 
                 // Opcional: setar motor em 'B' (freio ativo)
                 // motor_set_direction('B');
@@ -530,7 +575,7 @@ void process_control() {
         // Resetar contadores a cada intervalo de tempo e calcular os valores
 
         // Simular tempo de processamento
-        sleep(1);
+        sleep(2);
     }
 }
 
@@ -601,7 +646,7 @@ int main() {
     printf("Limite inferior do RPM %d vezes.\n", cont_rpm_inf);
     printf("Limite de temperatura %d vezes.\n", cont_max_temp);
     printf("Acionamentos Totais: %d.\n",
-           (cont_vel_sup + cont_vel_inf + cont_rpm_sup + cont_rpm_inf + cont_max_temp));
+          (cont_vel_sup + cont_vel_inf + cont_rpm_sup + cont_rpm_inf + cont_max_temp));
     printf("===================================================\n\n");
 
     // Limpar recursos antes de sair
