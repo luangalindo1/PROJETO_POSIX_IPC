@@ -132,7 +132,7 @@ void motor_hall_callback(void) {
 
     double delta = (tempoAtual.tv_sec - ultimoPulso.tv_sec) +
                    (tempoAtual.tv_nsec - ultimoPulso.tv_nsec) / 1e9;
-    if (delta > 0.0001) { // Filtro de debounce: 0,1ms
+    if (delta > 0.00001) { // Filtro de debounce: 0,1ms
         motorPulsos++;
         ultimoPulso = tempoAtual;
     }
@@ -291,9 +291,9 @@ int motor_rpm() {
 
     // Tempo decorrido desde a última medição
     deltaTempo = (tempoAtual.tv_sec - ultimoTempoMotor.tv_sec) +
-                        (tempoAtual.tv_nsec - ultimoTempoMotor.tv_nsec) / 1e9;
+                        ((tempoAtual.tv_nsec - ultimoTempoMotor.tv_nsec) / 1e9);
 
-    if (deltaTempo < 1e-4) return 0; // Evitar divisão por zero
+    if (deltaTempo < 1e-5) return 0; // Evitar divisão por zero
 
     // Cálculo do RPM
     //rpm = (motorPulsos / MOTOR_PULSOS_POR_REVOLUCAO) / deltaTempo * 60.0;
