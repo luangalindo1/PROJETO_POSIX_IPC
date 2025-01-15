@@ -298,7 +298,6 @@ int motor_rpm() {
 
 float velocidade() {
     struct timespec tempoAtual;
-    clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
     double deltaTempo_a = 0.0;
     double deltaTempo_b = 0.0;
     double velocidade_kmh = 0.0;
@@ -306,6 +305,8 @@ float velocidade() {
     //double velocidade_ms_b = 0.0;
     double velocidade_a = 0.0;
     double velocidade_b = 0.0;
+    
+    clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
 
     // Tempo decorrido desde a última medição
     deltaTempo_a = (tempoAtual.tv_sec - ultimoTempoRoda_a.tv_sec) +
@@ -463,7 +464,7 @@ void *threadPiscaSetaEsq(void *arg) {
 }
 
 void *threadPiscaSetaDir(void *arg) {
-    (void)arg; // Silenciar warning de parâmetro não utilizado
+    (void)arg;
 
     while (running) {
         sem_wait(sem_sync);
@@ -483,18 +484,62 @@ void *threadPiscaSetaDir(void *arg) {
     return NULL;
 }
 
+void *threadComandosDash(void *arg) {
+    (void)arg;
+
+    while (running) {
+        // Leitura dos pedais
+        if (digitalRead(PEDAL_AC)) {
+            motorDuty = (motorDuty < 10) ? motorDuty + 1 : 10;
+            softPwmWrite(MOTOR_POT, motorDuty);
+            motor_set_direction('D');
+        }
+        if (digitalRead(PEDAL_FR)) {
+            freioDuty = (freioDuty < 10) ? freioDuty + 1 : 10;
+            softPwmWrite(FREIO_INT, freioDuty);
+            motor_set_direction('B');
+        }
+
+        // Leitura dos comandos de faróis e setas
+        if (digitalRead(COMANDO_FAROL)) {
+            sem_wait(sem_sync);
+            status_trigg->farol_baixo = !status_trigg->farol_baixo;
+            digitalWrite(FAROL_BAIXO, status_trigg->farol_baixo ? HIGH : LOW);
+            sem_post(sem_sync);
+        }
+        if (digitalRead(COMANDO_SETA_ESQ)) {
+            sem_wait(sem_sync);
+            status_trigg->seta_esq = !status_trigg->seta_esq;
+            sem_post(sem_sync);
+        }
+        if (digitalRead(COMANDO_SETA_DIR)) {
+            sem_wait(sem_sync);
+            status_trigg->seta_dir = !status_trigg->seta_dir;
+            sem_post(sem_sync);
+        }
+
+        usleep(50000); // Intervalo para evitar polling agressivo
+    }
+
+    return NULL;
+}
+
 // --------------------------
 // 9. Loop Principal
 // --------------------------
 void process_control() {
     // Criar threads para piscar setas
-    pthread_t th_esq, th_dir;
+    pthread_t th_esq, th_dir, th_comandos;
     if (pthread_create(&th_esq, NULL, threadPiscaSetaEsq, NULL) != 0) {
         perror("Erro ao criar thread para piscar seta esquerda");
         exit(EXIT_FAILURE);
     }
     if (pthread_create(&th_dir, NULL, threadPiscaSetaDir, NULL) != 0) {
         perror("Erro ao criar thread para piscar seta direita");
+        exit(EXIT_FAILURE);
+    }
+    if (pthread_create(&th_comandos, NULL, threadComandosDash, NULL) != 0) {
+        perror("Erro ao criar thread comandos do dashboard");
         exit(EXIT_FAILURE);
     }
 
