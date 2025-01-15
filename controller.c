@@ -51,7 +51,7 @@
 #define LUZ_TEMP_MOTOR 12        // Luz de Alerta da Temperatura do Motor (OUT)
 
 // Comandos
-#define COMANDO_FAROL 16         // Comando de Ligar/Desligar Farol (IN)
+#define COMANDO_FAROL_BAIXO 16         // Comando de Ligar/Desligar Farol (IN)
 #define COMANDO_FAROL_ALTO 1     // Comando de Ligar/Desligar Farol Alto (IN)
 #define COMANDO_SETA_ESQ 20      // Comando de Ligar/Desligar Seta Esquerda (IN)
 #define COMANDO_SETA_DIR 21      // Comando de Ligar/Desligar Seta Direita (IN)
@@ -283,7 +283,7 @@ int motor_rpm() {
     deltaTempo = (tempoAtual.tv_sec - ultimoTempoMotor.tv_sec) +
                         (tempoAtual.tv_nsec - ultimoTempoMotor.tv_nsec) / 1e9;
 
-    if (deltaTempo == 0) return 0.0; // Evitar divisão por zero
+    if (deltaTempo < 1e-6) return 0; // Evitar divisão por zero
 
     // Cálculo do RPM
     //rpm = (motorPulsos / MOTOR_PULSOS_POR_REVOLUCAO) / deltaTempo * 60.0;
@@ -315,7 +315,7 @@ float velocidade() {
                         (tempoAtual.tv_nsec - ultimoTempoRoda_b.tv_nsec) / 1e9;
 
     // Evitar divisão por zero
-    if ((deltaTempo_a == 0) || (deltaTempo_b == 0)) return 0.0; 
+    if ((deltaTempo_a < 1e-6) || (deltaTempo_b < 1e-6)) return 0; 
 
     /*
     Como não estamos utilizando informações de raio ou perímetro, 
@@ -492,19 +492,29 @@ void *threadComandosDash(void *arg) {
         if (digitalRead(PEDAL_AC)) {
             motorDuty = (motorDuty < 10) ? motorDuty + 1 : 10;
             softPwmWrite(MOTOR_POT, motorDuty);
+            softPwmWrite(FREIO_INT, 0);
+            digitalWrite(LUZ_FREIO, LOW);
             motor_set_direction('D');
         }
         if (digitalRead(PEDAL_FR)) {
             freioDuty = (freioDuty < 10) ? freioDuty + 1 : 10;
             softPwmWrite(FREIO_INT, freioDuty);
+            softPwmWrite(MOTOR_POT, 0);
+            digitalWrite(LUZ_FREIO, HIGH);
             motor_set_direction('B');
         }
 
         // Leitura dos comandos de faróis e setas
-        if (digitalRead(COMANDO_FAROL)) {
+        if (digitalRead(COMANDO_FAROL_BAIXO)) {
             sem_wait(sem_sync);
             status_trigg->farol_baixo = !status_trigg->farol_baixo;
             digitalWrite(FAROL_BAIXO, status_trigg->farol_baixo ? HIGH : LOW);
+            sem_post(sem_sync);
+        }
+        if (digitalRead(COMANDO_FAROL_ALTO)) {
+            sem_wait(sem_sync);
+            status_trigg->farol_alto = !status_trigg->farol_alto;
+            digitalWrite(FAROL_ALTO, status_trigg->farol_alto ? HIGH : LOW);
             sem_post(sem_sync);
         }
         if (digitalRead(COMANDO_SETA_ESQ)) {
