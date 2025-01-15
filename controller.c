@@ -633,13 +633,12 @@ void process_control() {
                 if (motorDuty < 10) motorDuty += 1; 
                 if (motorDuty > 10) motorDuty = 10;
                 softPwmWrite(MOTOR_POT, motorDuty);
-                if (freioDuty != 0) {
-                    freioDuty = 0;
-                    softPwmWrite(FREIO_INT, freioDuty);
-                }
+                
+                freioDuty = 0;
+                softPwmWrite(FREIO_INT, freioDuty);
 
                 digitalWrite(LUZ_FREIO, LOW);
-                
+
                 // Ajustar direção para frente
                 motor_set_direction('D');
             } else if (strcmp(msg.command, "Acionar Pedal do Freio") == 0) {
@@ -647,10 +646,9 @@ void process_control() {
                 if (freioDuty < 10) freioDuty += 1;
                 if (freioDuty > 10) freioDuty = 10;
                 softPwmWrite(FREIO_INT, freioDuty);
-                if (motorDuty != 0) {
-                    motorDuty = 0;
-                    softPwmWrite(MOTOR_POT, motorDuty);
-                }
+                
+                motorDuty = 0;
+                softPwmWrite(MOTOR_POT, motorDuty);
 
                 digitalWrite(LUZ_FREIO, HIGH);
                 
