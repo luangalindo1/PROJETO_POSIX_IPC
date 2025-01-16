@@ -288,7 +288,7 @@ int motor_rpm() {
     clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
     double deltaTempo = 0.0;
     double rpm = 0.0;
-    static unsigned long Pulso_Atual = motorPulsos;
+    unsigned long Pulso_Atual = motorPulsos;
 
     // Tempo decorrido desde a última medição
     deltaTempo = (tempoAtual.tv_sec - ultimoTempoMotor.tv_sec) +
