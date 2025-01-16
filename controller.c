@@ -241,7 +241,7 @@ void init_shared_memory() {
     status_trigg->farol_baixo = false;
     status_trigg->farol_alto = false;
 
-    printf("Memórias compartilhadas inicializadas.\n");
+    printf("============= Memórias compartilhadas inicializadas. ===============\n");
 }
 
 // --------------------------
@@ -461,7 +461,7 @@ void init_gpio() {
         exit(EXIT_FAILURE);
     }
 
-    printf("GPIO inicializada.\n");
+    printf("========== GPIO inicializada. ==========\n");
 }
 
 // --------------------------
@@ -598,12 +598,13 @@ void process_control() {
         printf("Temperatura: %.2f ºC\n", aux_temp);
 
         // Atualizar velocidade e RPM
+        sem_wait(sem_sync);
         clock_gettime(CLOCK_MONOTONIC, &ultimoTempoRoda_a);
         clock_gettime(CLOCK_MONOTONIC, &ultimoTempoRoda_b);
         clock_gettime(CLOCK_MONOTONIC, &ultimoTempoMotor);
         aux_vel = velocidade();
         aux_rpm = motor_rpm();
-
+        sem_post(sem_sync);
 
         // Regras de limite
         if (aux_vel > 200.0) {
@@ -653,7 +654,7 @@ void process_control() {
         // Ler comandos do painel
         Message msg;
         if (msgrcv(msg_queue_id, &msg, sizeof(msg) - sizeof(long), 1, IPC_NOWAIT) > 0) {
-            printf("\nComando recebido do Painel: %s\n", msg.command);
+            printf("\n ===== Comando recebido do Painel: %s =====\n", msg.command);
 
             // Processar comando
             if (strcmp(msg.command, "Ligar Seta Esquerda") == 0) {
@@ -753,7 +754,7 @@ void cleanup() {
     if (cleaned) return; 
     cleaned = true;
 
-    printf("Limpando recursos...\n");
+    printf("========Limpando recursos...========\n");
 
     // Zerar PWM
     softPwmWrite(MOTOR_POT, 0);
@@ -784,7 +785,7 @@ void cleanup() {
         sem_unlink("/sem_sync");
     }
 
-    printf("Recursos liberados com sucesso!\n");
+    printf("========Recursos liberados com sucesso!========\n");
 }
 
 // --------------------------
@@ -801,7 +802,7 @@ int main() {
     // Inicializar GPIO e PWM
     init_gpio();
 
-    printf("Controlador inicializado. Aguardando dados...\n");
+    printf("======== Controlador inicializado. Aguardando dados... ========\n");
 
     // Executar loop principal
     process_control();
