@@ -435,8 +435,8 @@ void init_gpio() {
     gpio_pin_setup(LUZ_FREIO, OUTPUT);
     gpio_pin_setup(LUZ_TEMP_MOTOR, OUTPUT);
     
-    // Sensores Hall (entradas)
-    gpio_pin_setup(SENSOR_HALL_MOTOR, INPUT);
+    // Sensores Hall (entradas) ???
+    gpio_pin_setup(SENSOR_HALL_MOTOR, OUTPUT);
     gpio_pin_setup(SENSOR_HALL_RODA_A, INPUT);
     gpio_pin_setup(SENSOR_HALL_RODA_B, INPUT);
     
