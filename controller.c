@@ -295,7 +295,7 @@ double motor_rpm() {
     // Cálculo do RPM
     //rpm = (motorPulsos / MOTOR_PULSOS_POR_REVOLUCAO) / deltaTempo * 60.0;
     //rpm = (Pulso_Atual / deltaTempo) * 60;
-    rpm = Pulso_Atual * 30.506;
+    rpm = Pulso_Atual * 30.4213562753;
     // Reset dos pulsos e atualização do tempo
     motorPulsos = 0;
     
@@ -351,8 +351,13 @@ double velocidade() {
     */
     
     // Cálculo das velocidades individuais
-    velocidade_a = rodaPulsos_a / deltaTempo_a;
-    velocidade_b = rodaPulsos_b / deltaTempo_b;
+    //velocidade_a = rodaPulsos_a / deltaTempo_a;
+    //velocidade_b = rodaPulsos_b / deltaTempo_b;
+
+    // Cálculo empirico
+    velocidade_a = rodaPulsos_a * 7.02857142855;
+    velocidade_b = rodaPulsos_b * 7.02857142855;
+
 
     velocidade_kmh = ((velocidade_a + velocidade_b) / 2.0);
 
