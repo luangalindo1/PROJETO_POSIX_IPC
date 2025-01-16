@@ -289,19 +289,30 @@ int motor_rpm() {
     double deltaTempo = 0.0;
     double rpm = 0.0;
     unsigned long Pulso_Atual = motorPulsos;
-
+    
+    // Debug
+    printf("Motor pulsos pré calculo RPM: %ld\n", motorPulsos);
+    printf("Tempo atual: %.10f\n", tempoAtual.tv_sec + (tempoAtual.tv_nsec / 1e9));
+    
     // Tempo decorrido desde a última medição
     deltaTempo = (tempoAtual.tv_sec - ultimoTempoMotor.tv_sec) +
                         ((tempoAtual.tv_nsec - ultimoTempoMotor.tv_nsec) / 1e9);
 
     if (deltaTempo == 0) return 0; // Evitar divisão por zero
+    
+    // Debug
     printf("Tempo decorrido RPM: %.10f\n", deltaTempo);
+    
     // Cálculo do RPM
     //rpm = (motorPulsos / MOTOR_PULSOS_POR_REVOLUCAO) / deltaTempo * 60.0;
     rpm = Pulso_Atual / deltaTempo;
     
     // Reset dos pulsos e atualização do tempo
     motorPulsos = 0;
+    
+    // Debug
+    printf("Motor pulsos post calculo RPM: %ld\n", motorPulsos);
+    
     ultimoTempoMotor = tempoAtual;
 
     return (int)rpm;
@@ -319,6 +330,11 @@ float velocidade() {
     
     clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
 
+    // Debug
+    printf("Tempo atual pre calculo velocidade: %.10f\n", tempoAtual.tv_sec + (tempoAtual.tv_nsec / 1e9));
+    printf("roda_a pulsos pré calculo  %ld\n", roda_a_pulsos);
+    printf("roda_b pulsos pré calculo  %ld\n", roda_b_pulsos);
+
     // Tempo decorrido desde a última medição
     deltaTempo_a = (tempoAtual.tv_sec - ultimoTempoRoda_a.tv_sec) +
                         (tempoAtual.tv_nsec - ultimoTempoRoda_a.tv_nsec) / 1e9;
@@ -329,6 +345,7 @@ float velocidade() {
     if ((deltaTempo_a < 1e-9) || (deltaTempo_b < 1e-9)) return 0; 
     printf("Tempo decorrido roda_a: %.10f\n", deltaTempo_a);
     printf("Tempo decorrido roda_b: %.10f\n", deltaTempo_b);
+    
     /*
     Como não estamos utilizando informações de raio ou perímetro, 
     o valor da velocidade será uma unidade arbitrária proporcional ao número de pulsos por segundo.
@@ -353,6 +370,11 @@ float velocidade() {
     // Reset dos pulsos e atualização do tempo
     rodaPulsos_a = 0;
     rodaPulsos_b = 0;
+
+    // Debug
+    printf("roda_a pulsos post calculo  %ld\n", rodaPulsos_a);
+    printf("roda_b pulsos post calculo  %ld\n", rodaPulsos_b);
+    
     ultimoTempoRoda_a = tempoAtual;
     ultimoTempoRoda_b = tempoAtual;
 
