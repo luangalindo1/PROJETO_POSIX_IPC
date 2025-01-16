@@ -76,9 +76,9 @@
 
 // Estrutura para os dados dos sensores
 typedef struct {
-    float velocidade; 
-    int rpm;          
-    float temperatura;
+    double velocidade; 
+    double rpm;          
+    double temperatura;
 } SensorData;
 
 // Estrutura para o status dos acionadores
@@ -265,14 +265,14 @@ void init_semaphore() {
 // --------------------------
 // 6. Cálculo de Temperatura
 // --------------------------
-float calculate_engine_temp(float velocidade, int rpm) {
-    float temp_rise = (rpm / 10.0) * FATOR_ACELERACAO;
-    float cooling_effect = velocidade * FATOR_RESFRIAMENTO_AR;
-    float temp = BASE_TEMP + temp_rise - cooling_effect;
-    return (float)fmin(MAX_TEMP_MOTOR, temp);
+double calculate_engine_temp(double velocidade, double rpm) {
+    double temp_rise = (rpm / 10.0) * FATOR_ACELERACAO;
+    double cooling_effect = velocidade * FATOR_RESFRIAMENTO_AR;
+    double temp = BASE_TEMP + temp_rise - cooling_effect;
+    return (double)fmin(MAX_TEMP_MOTOR, temp);
 }
 
-int motor_rpm() {
+double motor_rpm() {
     struct timespec tempoAtual;
     clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
     double deltaTempo = 0.0;
@@ -287,7 +287,7 @@ int motor_rpm() {
     deltaTempo = (tempoAtual.tv_sec - ultimoTempoMotor.tv_sec) +
                         ((tempoAtual.tv_nsec - ultimoTempoMotor.tv_nsec) / 1e9);
 
-    if (deltaTempo < 1e-3) deltaTempo = 1e-3; // Evitar divisão por zero
+    if (deltaTempo < 1e-9) deltaTempo = 1e-9; // Evitar divisão por zero
     
     // Debug
     printf("Delta tempo RPM: %.10f\n", deltaTempo);
@@ -304,10 +304,10 @@ int motor_rpm() {
     
     ultimoTempoMotor = tempoAtual;
 
-    return (int)rpm;
+    return rpm;
 }
 
-float velocidade() {
+double velocidade() {
     struct timespec tempoAtual;
     double deltaTempo_a = 0.0;
     double deltaTempo_b = 0.0;
@@ -367,7 +367,7 @@ float velocidade() {
     ultimoTempoRoda_a = tempoAtual;
     ultimoTempoRoda_b = tempoAtual;
 
-    return (float)velocidade_kmh;
+    return velocidade_kmh;
 }
 
 
@@ -593,8 +593,7 @@ void process_control() {
 
     // Loop principal
     while (running) {
-        float aux_vel, aux_temp;
-        int aux_rpm;
+        double aux_vel, aux_temp, aux_rpm;
 
         // Obter dados da memória
         sem_wait(sem_sync);
@@ -605,8 +604,8 @@ void process_control() {
 
         // Mostrar dados
         printf("\n===== Dados dos Sensores =====\n");
-        printf("Velocidade: %.1f km/h\n", aux_vel);
-        printf("RPM: %d\n", aux_rpm);
+        printf("Velocidade: %.2f km/h\n", aux_vel);
+        printf("RPM: %.2f\n", aux_rpm);
         printf("Temperatura: %.2f ºC\n", aux_temp);
 
         // Atualizar velocidade e RPM
@@ -640,8 +639,8 @@ void process_control() {
         if (aux_temp >= MAX_TEMP_MOTOR) {
             printf("\n========= ALERTA DE TEMPERATURA =========\n");
             cont_max_temp++;
-            //aux_vel *= 0.9;
-            //aux_rpm *= 0.9;
+            aux_vel *= 0.9;
+            aux_rpm *= 0.9;
             digitalWrite(LUZ_TEMP_MOTOR, HIGH);
         } else {
             digitalWrite(LUZ_TEMP_MOTOR, LOW);
