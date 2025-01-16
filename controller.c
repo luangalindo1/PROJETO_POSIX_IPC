@@ -325,7 +325,7 @@ float velocidade() {
                         (tempoAtual.tv_nsec - ultimoTempoRoda_b.tv_nsec) / 1e9;
 
     // Evitar divisão por zero
-    if ((deltaTempo_a < 1e-6) || (deltaTempo_b < 1e-6)) return 0; 
+    if ((deltaTempo_a < 1e-9) || (deltaTempo_b < 1e-9)) return 0; 
 
     /*
     Como não estamos utilizando informações de raio ou perímetro, 
