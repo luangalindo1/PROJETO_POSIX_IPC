@@ -321,9 +321,9 @@ float velocidade() {
 
     // Tempo decorrido desde a última medição
     deltaTempo_a = (tempoAtual.tv_sec - ultimoTempoRoda_a.tv_sec) +
-                        (tempoAtual.tv_nsec - ultimoTempoRoda_a.tv_nsec); /// 1e9;
+                        (tempoAtual.tv_nsec - ultimoTempoRoda_a.tv_nsec) / 1e9;
     deltaTempo_b = (tempoAtual.tv_sec - ultimoTempoRoda_b.tv_sec) +
-                        (tempoAtual.tv_nsec - ultimoTempoRoda_b.tv_nsec); /// 1e9;
+                        (tempoAtual.tv_nsec - ultimoTempoRoda_b.tv_nsec) / 1e9;
 
     // Evitar divisão por zero
     if ((deltaTempo_a < 1e-9) || (deltaTempo_b < 1e-9)) return 0; 
