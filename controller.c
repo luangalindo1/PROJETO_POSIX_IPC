@@ -298,10 +298,10 @@ int motor_rpm() {
     deltaTempo = (tempoAtual.tv_sec - ultimoTempoMotor.tv_sec) +
                         ((tempoAtual.tv_nsec - ultimoTempoMotor.tv_nsec) / 1e9);
 
-    if (deltaTempo == 0) return 0; // Evitar divisão por zero
+    if (deltaTempo < 0.001) deltaTempo = 0.001; // Evitar divisão por zero
     
     // Debug
-    printf("Tempo decorrido RPM: %.10f\n", deltaTempo);
+    printf("Delta tempo RPM: %.10f\n", deltaTempo);
     
     // Cálculo do RPM
     //rpm = (motorPulsos / MOTOR_PULSOS_POR_REVOLUCAO) / deltaTempo * 60.0;
@@ -343,8 +343,8 @@ float velocidade() {
 
     // Evitar divisão por zero
     if ((deltaTempo_a < 1e-9) || (deltaTempo_b < 1e-9)) return 0; 
-    printf("Tempo decorrido roda_a: %.10f\n", deltaTempo_a);
-    printf("Tempo decorrido roda_b: %.10f\n", deltaTempo_b);
+    printf("Delta tempo roda_a: %.10f\n", deltaTempo_a);
+    printf("Delta tempo roda_b: %.10f\n", deltaTempo_b);
     
     /*
     Como não estamos utilizando informações de raio ou perímetro, 
