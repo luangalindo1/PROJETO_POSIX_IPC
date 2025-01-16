@@ -138,7 +138,7 @@ void motor_hall_callback(void) {
     }*/
 
     motorPulsos++;
-    usleep(1000);
+    //usleep(1000);
 }
 
 
