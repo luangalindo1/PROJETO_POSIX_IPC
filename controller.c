@@ -126,16 +126,16 @@ int cont_max_temp = 0;
 // 1. Funções de Callback para Sensores Hall
 // --------------------------
 void motor_hall_callback(void) {
-    static struct timespec ultimoPulso;
+    /*static struct timespec ultimoPulso;
     struct timespec tempoAtual;
     clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
 
     double delta = (tempoAtual.tv_sec - ultimoPulso.tv_sec) +
                    (tempoAtual.tv_nsec - ultimoPulso.tv_nsec) / 1e9;
-    if (delta > 0.00001) { // Filtro de debounce: 0,1ms
+    if (delta > 0.00001) {*/ // Filtro de debounce: 0,1ms
         motorPulsos++;
-        ultimoPulso = tempoAtual;
-    }
+        /*ultimoPulso = tempoAtual;
+    }*/
 }
 
 
@@ -288,16 +288,17 @@ int motor_rpm() {
     clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
     double deltaTempo = 0.0;
     double rpm = 0.0;
+    static unsigned long Pulso_Atual = motorPulsos;
 
     // Tempo decorrido desde a última medição
     deltaTempo = (tempoAtual.tv_sec - ultimoTempoMotor.tv_sec) +
                         ((tempoAtual.tv_nsec - ultimoTempoMotor.tv_nsec) / 1e9);
 
-    if (deltaTempo < 1e-5) return 0; // Evitar divisão por zero
+    if (deltaTempo == 0) return 0; // Evitar divisão por zero
 
     // Cálculo do RPM
     //rpm = (motorPulsos / MOTOR_PULSOS_POR_REVOLUCAO) / deltaTempo * 60.0;
-    rpm = motorPulsos / deltaTempo;
+    rpm = Pulso_Atual / deltaTempo;
     
     // Reset dos pulsos e atualização do tempo
     motorPulsos = 0;
