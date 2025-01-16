@@ -295,7 +295,7 @@ double motor_rpm() {
     // Cálculo do RPM
     //rpm = (motorPulsos / MOTOR_PULSOS_POR_REVOLUCAO) / deltaTempo * 60.0;
     //rpm = (Pulso_Atual / deltaTempo) * 60;
-    rpm = Pulso_Atual * 30;
+    rpm = Pulso_Atual * 30.506;
     // Reset dos pulsos e atualização do tempo
     motorPulsos = 0;
     
