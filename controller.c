@@ -295,7 +295,7 @@ int motor_rpm() {
                         ((tempoAtual.tv_nsec - ultimoTempoMotor.tv_nsec) / 1e9);
 
     if (deltaTempo == 0) return 0; // Evitar divisão por zero
-
+    printf("Tempo decorrido: %f\n", deltaTempo);
     // Cálculo do RPM
     //rpm = (motorPulsos / MOTOR_PULSOS_POR_REVOLUCAO) / deltaTempo * 60.0;
     rpm = Pulso_Atual / deltaTempo;
@@ -754,7 +754,7 @@ void cleanup() {
     if (cleaned) return; 
     cleaned = true;
 
-    printf("========Limpando recursos...========\n");
+    printf("======== Limpando recursos...========\n");
 
     // Zerar PWM
     softPwmWrite(MOTOR_POT, 0);
@@ -785,7 +785,7 @@ void cleanup() {
         sem_unlink("/sem_sync");
     }
 
-    printf("========Recursos liberados com sucesso!========\n");
+    printf("======== Recursos liberados com sucesso!========\n");
 }
 
 // --------------------------
