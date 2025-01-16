@@ -298,7 +298,7 @@ int motor_rpm() {
     deltaTempo = (tempoAtual.tv_sec - ultimoTempoMotor.tv_sec) +
                         ((tempoAtual.tv_nsec - ultimoTempoMotor.tv_nsec) / 1e9);
 
-    if (deltaTempo < 0.001) deltaTempo = 0.001; // Evitar divisão por zero
+    if (deltaTempo < 1e-9) return 0; // Evitar divisão por zero
     
     // Debug
     printf("Delta tempo RPM: %.10f\n", deltaTempo);
