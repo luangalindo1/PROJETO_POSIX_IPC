@@ -332,8 +332,8 @@ float velocidade() {
 
     // Debug
     printf("Tempo atual pre calculo velocidade: %.10f\n", tempoAtual.tv_sec + (tempoAtual.tv_nsec / 1e9));
-    printf("roda_a pulsos pré calculo  %ld\n", roda_a_pulsos);
-    printf("roda_b pulsos pré calculo  %ld\n", roda_b_pulsos);
+    printf("roda_a pulsos pré calculo  %ld\n", rodaPulsos_a);
+    printf("roda_b pulsos pré calculo  %ld\n", rodaPulsos_b);
 
     // Tempo decorrido desde a última medição
     deltaTempo_a = (tempoAtual.tv_sec - ultimoTempoRoda_a.tv_sec) +
@@ -374,7 +374,7 @@ float velocidade() {
     // Debug
     printf("roda_a pulsos post calculo  %ld\n", rodaPulsos_a);
     printf("roda_b pulsos post calculo  %ld\n", rodaPulsos_b);
-    
+
     ultimoTempoRoda_a = tempoAtual;
     ultimoTempoRoda_b = tempoAtual;
 
