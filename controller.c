@@ -51,7 +51,7 @@
 #define LUZ_TEMP_MOTOR 12        // Luz de Alerta da Temperatura do Motor (OUT)
 
 // Comandos
-#define COMANDO_FAROL_BAIXO 16         // Comando de Ligar/Desligar Farol (IN)
+#define COMANDO_FAROL_BAIXO 16   // Comando de Ligar/Desligar Farol (IN)
 #define COMANDO_FAROL_ALTO 1     // Comando de Ligar/Desligar Farol Alto (IN)
 #define COMANDO_SETA_ESQ 20      // Comando de Ligar/Desligar Seta Esquerda (IN)
 #define COMANDO_SETA_DIR 21      // Comando de Ligar/Desligar Seta Direita (IN)
@@ -402,8 +402,8 @@ void init_gpio() {
     }
 
     // Configurar pinos de direção do motor
-    gpio_pin_setup(MOTOR_DIR1, INPUT);
-    gpio_pin_setup(MOTOR_DIR2, INPUT);
+    gpio_pin_setup(MOTOR_DIR1, OUTPUT);
+    gpio_pin_setup(MOTOR_DIR2, OUTPUT);
 
     // Configurar pinos dos pedais
     gpio_pin_setup(PEDAL_AC, INPUT);
@@ -431,19 +431,34 @@ void init_gpio() {
     gpio_pin_setup(LUZ_SETA_ESQ, OUTPUT);
     gpio_pin_setup(LUZ_SETA_DIR, OUTPUT);
 
+    // Faróis (entradas digitais)
+    gpio_pin_setup(COMANDO_FAROL_BAIXO, INPUT);
+    gpio_pin_setup(COMANDO_FAROL_ALTO, INPUT);
+    gpio_pin_setup(COMANDO_SETA_ESQ, INPUT);
+    gpio_pin_setup(COMANDO_SETA_DIR, INPUT);
+
     // Luzes (saídas digitais)
     gpio_pin_setup(LUZ_FREIO, OUTPUT);
     gpio_pin_setup(LUZ_TEMP_MOTOR, OUTPUT);
     
-    // Sensores Hall (entradas) ???
-    gpio_pin_setup(SENSOR_HALL_MOTOR, OUTPUT);
+    // Sensores Hall (entradas)
+    gpio_pin_setup(SENSOR_HALL_MOTOR, INPUT);
     gpio_pin_setup(SENSOR_HALL_RODA_A, INPUT);
     gpio_pin_setup(SENSOR_HALL_RODA_B, INPUT);
     
     // Configurar interrupções para sensor Hall
-    wiringPiISR(SENSOR_HALL_MOTOR, INT_EDGE_RISING, &motor_hall_callback);
-    wiringPiISR(SENSOR_HALL_RODA_A, INT_EDGE_RISING, &roda_a_hall_callback);
-    wiringPiISR(SENSOR_HALL_RODA_B, INT_EDGE_RISING, &roda_b_hall_callback);
+    if (wiringPiISR(SENSOR_HALL_MOTOR, INT_EDGE_RISING, &motor_hall_callback) < 0) {
+        fprintf(stderr, "Erro ao configurar interrupção para SENSOR_HALL_MOTOR\n");
+        exit(EXIT_FAILURE);
+    }
+    if (wiringPiISR(SENSOR_HALL_RODA_A, INT_EDGE_RISING, &roda_a_hall_callback) < 0) {
+        fprintf(stderr, "Erro ao configurar interrupção para SENSOR_HALL_RODA_A\n");
+        exit(EXIT_FAILURE);
+    }
+    if (wiringPiISR(SENSOR_HALL_RODA_B, INT_EDGE_RISING, &roda_b_hall_callback) < 0) {
+        fprintf(stderr, "Erro ao configurar interrupção para SENSOR_HALL_RODA_B\n");
+        exit(EXIT_FAILURE);
+    }
 
     printf("GPIO inicializada.\n");
 }
