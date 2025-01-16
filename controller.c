@@ -66,19 +66,11 @@
 #define MAX_TEMP_MOTOR 140
 #define BASE_TEMP 80
 
-// Definições de outras constantes
-//#define FREQ_PWM 1 // kHz
-//#define PERIOD_PWM (1 / FREQ_PWM) // ms
-//#define MOTOR_PULSOS_POR_REVOLUCAO 1   // Pulsos por volta completa do motor (1:1 no sensor Hall)
-//#define RAIO_RODA 0.3                  // Raio da roda em metros
-//#define PULSOS_POR_REVOLUCAO_RODA 1    // Pulsos por volta completa da roda (1:1 no sensor Hall)
-//#define PI 3.141592653589793           // Valor de PI
-
 // Estrutura para os dados dos sensores
 typedef struct {
-    double velocidade; 
-    double rpm;          
-    double temperatura;
+    float velocidade; 
+    float rpm;          
+    float temperatura;
 } SensorData;
 
 // Estrutura para o status dos acionadores
@@ -245,9 +237,7 @@ void init_message_queue() {
     
     // Limpar mensagens residuais
     Message msg;
-    while (msgrcv(msg_queue_id, &msg, sizeof(msg) - sizeof(long), 0, IPC_NOWAIT) > 0) {
-        // descartar
-    }
+    while (msgrcv(msg_queue_id, &msg, sizeof(msg) - sizeof(long), 0, IPC_NOWAIT) > 0) {}
 }
 
 // --------------------------
@@ -265,114 +255,67 @@ void init_semaphore() {
 // --------------------------
 // 6. Cálculo de Temperatura
 // --------------------------
-double calculate_engine_temp(double velocidade, double rpm) {
-    double temp_rise = (rpm / 10.0) * FATOR_ACELERACAO;
-    double cooling_effect = velocidade * FATOR_RESFRIAMENTO_AR;
-    double temp = BASE_TEMP + temp_rise - cooling_effect;
-    return (double)fmin(MAX_TEMP_MOTOR, temp);
+float calculate_engine_temp(float velocidade, float rpm) {
+    float temp_rise = (rpm / 10.0) * FATOR_ACELERACAO;
+    float cooling_effect = velocidade * FATOR_RESFRIAMENTO_AR;
+    float temp = BASE_TEMP + temp_rise - cooling_effect;
+    return (float)fmin(MAX_TEMP_MOTOR, temp);
 }
 
-double motor_rpm() {
-    struct timespec tempoAtual;
-    clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
-    double deltaTempo = 0.0;
-    double rpm = 0.0;
-    unsigned long Pulso_Atual = motorPulsos;
+float motor_rpm() {
+    float rpm = 0.0;
     
     // Debug
-    printf("Motor pulsos pré calculo RPM: %ld\n", motorPulsos);
-    printf("Tempo atual: %.10f\n", tempoAtual.tv_sec + (tempoAtual.tv_nsec / 1e9));
+    //printf("Motor pulsos pré calculo RPM: %ld\n", motorPulsos);
     
-    // Tempo decorrido desde a última medição
-    deltaTempo = (tempoAtual.tv_sec - ultimoTempoMotor.tv_sec) +
-                        ((tempoAtual.tv_nsec - ultimoTempoMotor.tv_nsec) / 1e9);
-
-    if (deltaTempo < 1e-9) deltaTempo = 1e-9; // Evitar divisão por zero
+    // Constantes empregadas no cálculo do RPM
+    const int RPM_CONST1 = 2285;
+    const int RPM_CONST2 = 800;
+    const int PULSE_CONST1 = 76;
+    const int PULSE_CONST2 = 26;
+    const float EMP_CONST = ((RPM_CONST1 / PULSE_CONST1) + (RPM_CONST2 / PULSE_CONST2)) / 2;
     
-    // Debug
-    printf("Delta tempo RPM: %.10f\n", deltaTempo);
+    rpm = motorPulsos * EMP_CONST;
     
-    // Cálculo do RPM
-    //rpm = (motorPulsos / MOTOR_PULSOS_POR_REVOLUCAO) / deltaTempo * 60.0;
-    //rpm = (Pulso_Atual / deltaTempo) * 60;
-    rpm = Pulso_Atual * 30.4213562753;
     // Reset dos pulsos e atualização do tempo
     motorPulsos = 0;
     
     // Debug
-    printf("Motor pulsos post calculo RPM: %ld\n", motorPulsos);
-    
-    ultimoTempoMotor = tempoAtual;
+    //printf("Motor pulsos post calculo RPM: %ld\n", motorPulsos);
 
     return rpm;
 }
 
-double velocidade() {
-    struct timespec tempoAtual;
-    double deltaTempo_a = 0.0;
-    double deltaTempo_b = 0.0;
-    double velocidade_kmh = 0.0;
-    //double velocidade_ms_a = 0.0;
-    //double velocidade_ms_b = 0.0;
-    double velocidade_a = 0.0;
-    double velocidade_b = 0.0;
+float velocidade() {
+    float velocidade_media = 0.0;
+    float velocidade_a = 0.0;
+    float velocidade_b = 0.0;
     
-    clock_gettime(CLOCK_MONOTONIC, &tempoAtual);
-
     // Debug
-    printf("Tempo atual pre calculo velocidade: %.10f\n", tempoAtual.tv_sec + (tempoAtual.tv_nsec / 1e9));
-    printf("roda_a pulsos pré calculo  %ld\n", rodaPulsos_a);
-    printf("roda_b pulsos pré calculo  %ld\n", rodaPulsos_b);
+    //printf("roda_a pulsos pré calculo  %ld\n", rodaPulsos_a);
+    //printf("roda_b pulsos pré calculo  %ld\n", rodaPulsos_b);
 
-    // Tempo decorrido desde a última medição
-    deltaTempo_a = (tempoAtual.tv_sec - ultimoTempoRoda_a.tv_sec) +
-                        (tempoAtual.tv_nsec - ultimoTempoRoda_a.tv_nsec) / 1e9;
-    deltaTempo_b = (tempoAtual.tv_sec - ultimoTempoRoda_b.tv_sec) +
-                        (tempoAtual.tv_nsec - ultimoTempoRoda_b.tv_nsec) / 1e9;
-
-    // Evitar divisão por zero
-    if ((deltaTempo_a < 1e-9) || (deltaTempo_b < 1e-9)) return 0; 
-    printf("Delta tempo roda_a: %.10f\n", deltaTempo_a);
-    printf("Delta tempo roda_b: %.10f\n", deltaTempo_b);
+    // Constantes empregadas no cálculo da velocidade
+    const int VEL_CONST1 = 144;
+    const int PULSE_CONST1 = 20;
+    const int PULSE_CONST2 = 21;
+    const float EMP_CONST = VEL_CONST1 / ((PULSE_CONST1 + PULSE_CONST2) / 2);
     
-    /*
-    Como não estamos utilizando informações de raio ou perímetro, 
-    o valor da velocidade será uma unidade arbitrária proporcional ao número de pulsos por segundo.
-    
-    // Cálculo da velocidade linear
-    velocidade_msa = (rodaPulsos_a / PULSOS_POR_REVOLUCAO_RODA) * 
-                          (2 * PI * RAIO_RODA) / deltaTempo;
-
-    velocidade_msb = (rodaPulsos_b / PULSOS_POR_REVOLUCAO_RODA) * 
-                          (2 * PI * RAIO_RODA) / deltaTempo;
-
-    // Conversão de m/s para km/h
-    velocidade_kmh = ((velocidade_msa + velocidade_msb) / 2.0) * 3.6;
-    */
-    
-    // Cálculo das velocidades individuais
-    //velocidade_a = rodaPulsos_a / deltaTempo_a;
-    //velocidade_b = rodaPulsos_b / deltaTempo_b;
-
     // Cálculo empirico
-    velocidade_a = rodaPulsos_a * 7.02857142855;
-    velocidade_b = rodaPulsos_b * 7.02857142855;
+    velocidade_a = rodaPulsos_a * EMP_CONST;
+    velocidade_b = rodaPulsos_b * EMP_CONST;
 
-
-    velocidade_kmh = ((velocidade_a + velocidade_b) / 2.0);
+    velocidade_media = ((velocidade_a + velocidade_b) / 2.0);
 
     // Reset dos pulsos e atualização do tempo
     rodaPulsos_a = 0;
     rodaPulsos_b = 0;
 
     // Debug
-    printf("roda_a pulsos post calculo  %ld\n", rodaPulsos_a);
-    printf("roda_b pulsos post calculo  %ld\n", rodaPulsos_b);
+    //printf("roda_a pulsos post calculo  %ld\n", rodaPulsos_a);
+    //printf("roda_b pulsos post calculo  %ld\n", rodaPulsos_b);
 
-    ultimoTempoRoda_a = tempoAtual;
-    ultimoTempoRoda_b = tempoAtual;
-
-    return velocidade_kmh;
+    return velocidade_media;
 }
 
 
@@ -598,7 +541,7 @@ void process_control() {
 
     // Loop principal
     while (running) {
-        double aux_vel, aux_temp, aux_rpm;
+        float aux_vel, aux_temp, aux_rpm;
 
         // Obter dados da memória
         sem_wait(sem_sync);
@@ -614,13 +557,13 @@ void process_control() {
         printf("Temperatura: %.2f ºC\n", aux_temp);
 
         // Atualizar velocidade e RPM
-        sem_wait(sem_sync);
+        //sem_wait(sem_sync);
         clock_gettime(CLOCK_MONOTONIC, &ultimoTempoRoda_a);
         clock_gettime(CLOCK_MONOTONIC, &ultimoTempoRoda_b);
         clock_gettime(CLOCK_MONOTONIC, &ultimoTempoMotor);
         aux_vel = velocidade();
         aux_rpm = motor_rpm();
-        sem_post(sem_sync);
+        //sem_post(sem_sync);
 
         // Regras de limite
         if (aux_vel > 200.0) {
@@ -634,12 +577,12 @@ void process_control() {
         if (aux_rpm > 7000) {
             aux_rpm *= 0.9;
             cont_rpm_sup++;
-        } /*else if (aux_rpm < 800) {
+        } else if (aux_rpm < 780) {
             aux_rpm = 0; 
             cont_rpm_inf++;
             printf("\n========= O motor apagou =========\n");
             raise(SIGUSR2);
-        }*/ 
+        }
         
         if (aux_temp >= MAX_TEMP_MOTOR) {
             printf("\n========= ALERTA DE TEMPERATURA =========\n");
