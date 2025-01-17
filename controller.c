@@ -114,22 +114,41 @@ int cont_rpm_sup = 0;
 int cont_rpm_inf = 0;
 int cont_max_temp = 0;
 
-// --------------------------
-// 1. Funções de Callback para Sensores Hall
-// --------------------------
+
+/**
+ * @brief Função callback para o sensor Hall do motor.
+ *
+ * Incrementa o contador de pulsos do motor.
+ */
 void motor_hall_callback(void) {
     motorPulsos++;
 }
+/**
+ * @brief Função callback para o sensor Hall da roda A.
+ *
+ * Incrementa o contador de pulsos da roda A.
+ */
 void roda_a_hall_callback(void) {
     rodaPulsos_a++;
 }
+/**
+ * @brief Fun o callback para o sensor Hall da roda B.
+ *
+ * Incrementa o contador de pulsos da roda B.
+ */
 void roda_b_hall_callback(void) {
     rodaPulsos_b++;
 }
 
-// --------------------------
-// 2. Tratamento de Sinais
-// --------------------------
+/**
+ * @brief Função callback para tratar sinais recebidos pelo programa.
+ * 
+ * Trata os sinais SIGUSR1, SIGUSR2 e SIGINT.
+ * 
+ * Se o sinal for SIGUSR1, pausa o loop principal do programa.
+ * Se o sinal for SIGUSR2 ou SIGINT, envia uma mensagem "Encerrar" para o
+ * Painel de Comando e sinaliza para encerrar o programa.
+ */
 void signal_handler(int signal) {
     if (signal == SIGUSR1) {
         printf("Teste pausado (SIGUSR1)\n");
@@ -161,6 +180,16 @@ void signal_handler(int signal) {
     
 }
 
+/**
+ * @brief Instala os handlers para os sinais SIGUSR1, SIGUSR2 e SIGINT.
+ *
+ * SIGUSR1: Pausa o loop principal do programa. O programa pode ser
+ *          retomado com um sinal SIGUSR1.
+ * SIGUSR2: Encerra o programa. O painel de comando também recebe uma
+ *          mensagem de encerramento.
+ * SIGINT: Encerra o programa. O painel de comando também recebe uma
+ *         mensagem de encerramento.
+ */
 void setup_signals() {
     struct sigaction sa;
     sa.sa_handler = signal_handler;
@@ -180,9 +209,14 @@ void setup_signals() {
     }
 }
 
-// --------------------------
-// 3. Memória Compartilhada
-// --------------------------
+/**
+ * @brief Inicializa memórias compartilhadas para sensores e acionadores.
+ *
+ * Cria memória compartilhada para SensorData e Status_trigg, associa-as e
+ * inicializa os campos com valores padrão.
+ *
+ * @return Nada.
+ */
 void init_shared_memory() {
     // SensorData
     shm_id_sensors = shmget(SHM_KEY_SENSORS, sizeof(SensorData), IPC_CREAT | 0666);
@@ -225,9 +259,14 @@ void init_shared_memory() {
     printf("============= Memórias compartilhadas inicializadas. ===============\n");
 }
 
-// --------------------------
-// 4. Fila de Mensagens
-// --------------------------
+/**
+ * @brief Inicializa fila de mensagens para comunicação com o painel
+ *
+ * Cria a fila de mensagens com a chave MSG_KEY e remove mensagens residuais
+ * que por ventura tenham sido enviadas anteriormente.
+ *
+ * @return Nada.
+ */
 void init_message_queue() {
     msg_queue_id = msgget(MSG_KEY, IPC_CREAT | 0666);
     if (msg_queue_id < 0) {
@@ -240,9 +279,13 @@ void init_message_queue() {
     while (msgrcv(msg_queue_id, &msg, sizeof(msg) - sizeof(long), 0, IPC_NOWAIT) > 0) {}
 }
 
-// --------------------------
-// 5. Semáforo
-// --------------------------
+/**
+ * @brief Inicializa o semáforo de sincronização entre threads
+ *
+ * Limpa o nome do semáforo e o cria com o valor inicial de 1.
+ *
+ * @return Nenhum
+ */
 void init_semaphore() {
     sem_unlink("/sem_sync");
     sem_sync = sem_open("/sem_sync", O_CREAT | O_EXCL, 0666, 1);
@@ -252,9 +295,14 @@ void init_semaphore() {
     }
 }
 
-// --------------------------
-// 6. Cálculo de Temperatura
-// --------------------------
+/**
+ * @brief Calcula a temperatura do motor com base na fórmula dada no enunciado
+ *        do trabalho 1.
+ *
+ * @param velocidade A velocidade atual do veículo em km/h
+ * @param rpm O valor do RPM do motor
+ * @return A temperatura do motor em graus Celsius
+ */
 float calculate_engine_temp(float velocidade, float rpm) {
     float temp_rise = (rpm / 10.0) * FATOR_ACELERACAO;
     float cooling_effect = velocidade * FATOR_RESFRIAMENTO_AR;
@@ -262,6 +310,17 @@ float calculate_engine_temp(float velocidade, float rpm) {
     return (float)fmin(MAX_TEMP_MOTOR, temp);
 }
 
+/**
+ * Calcula o valor do RPM do motor, baseado em uma fórmula empírica.
+ *
+ * Essa fórmula utiliza a quantidade de pulsos do motor nos últimos segundos
+ * e aplica uma constante de conversão para obter o valor do RPM.
+ *
+ * A cada chamada, o valor do RPM é calculado e o contador de pulsos é
+ * resetado.
+ *
+ * @return O valor do RPM do motor.
+ */
 float motor_rpm() {
     float rpm = 0.0;
     
@@ -286,6 +345,18 @@ float motor_rpm() {
     return rpm;
 }
 
+/**
+ * Calcula a velocidade média com base nos pulsos dos sensores Hall das rodas.
+ *
+ * A função utiliza contadores de pulsos de duas rodas (A e B) para 
+ * calcular a velocidade individual de cada roda com uma constante 
+ * empiricamente definida. A média das velocidades das duas rodas é 
+ * então calculada para dar a velocidade final do veículo.
+ *
+ * Após o cálculo, os contadores de pulsos são resetados.
+ *
+ * @return A velocidade média do veículo.
+ */
 float velocidade() {
     float velocidade_media = 0.0;
     float velocidade_a = 0.0;
@@ -318,12 +389,18 @@ float velocidade() {
     return velocidade_media;
 }
 
-
-// --------------------------
-// 7. GPIO e PWM
-// --------------------------
+/**
+ * @brief Seta a direção do motor.
+ *
+ * A função define a direção do motor com base na entrada
+ * recebida. Se a entrada for diferente de 'D', 'R', 'B'
+ * ou 'N', a função define a direção como neutro.
+ *
+ * @param direction Direção do motor 
+ * ('D' = frente (drive), 'R' = ré, 
+ *  'B' = freio (brake), 'N' = neutro)
+ */
 void motor_set_direction(char direction) {
-    // 'D' = frente, 'R' = ré, 'B' = freio, 'N' = neutro
     switch (direction) {
         case 'D':
             digitalWrite(MOTOR_DIR1, HIGH);
@@ -345,6 +422,16 @@ void motor_set_direction(char direction) {
     }
 }
 
+/**
+ * @brief Inicializa um pino GPIO.
+ *
+ * A função define o pino como saída (OUTPUT) ou
+ * entrada (INPUT). Se o pino for definido como entrada,
+ * a função define como sem resistor de pull-up ou pull-down.
+ *
+ * @param pin Número do pino GPIO a ser inicializado.
+ * @param direction Direção do pino (OUTPUT ou INPUT).
+ */
 void gpio_pin_setup(int pin, int direction) {
     if (direction == OUTPUT) {
         pinMode(pin, OUTPUT);
@@ -355,6 +442,16 @@ void gpio_pin_setup(int pin, int direction) {
     }
 }
 
+/**
+ * @brief Inicializa GPIO e configura pinos.
+ *
+ * Inicializa o WiringPi no modo BCM, configura pinos
+ * de direção do motor, pedais, PWM do motor e do freio,
+ * faróis, setas, luzes e sensores Hall e configura
+ * interrupções para os sensores Hall.
+ *
+ * @return Nenhum.
+ */
 void init_gpio() {
     // Inicializar WiringPi (modo BCM)
     if (wiringPiSetupGpio() < 0) {
@@ -373,7 +470,7 @@ void init_gpio() {
     // Configurar PWM do motor e do freio:
     // Para garantir que o PWM funcione em 1 kHz,
     // precisamos de um intervalo de 1 ms e
-    // uma resolução de 10 bits.
+    // uma resolução de 11 níveis.
     // Configurando os pinos como saída
     //gpio_pin_setup(MOTOR_POT, OUTPUT);
     //gpio_pin_setup(FREIO_INT, OUTPUT);
@@ -424,9 +521,22 @@ void init_gpio() {
     printf("========== GPIO inicializada. ==========\n");
 }
 
-// --------------------------
-// 8. Threads para Piscar Setas
-// --------------------------
+
+/**
+ * @brief Thread para piscar seta esquerda
+ *
+ * A thread PiscaSetaEsq é responsável por piscar a seta esquerda
+ * quando o status_trigg->seta_esq estiver ativo. Ela espera por
+ * um sinal de sincronização, consulta o status da seta esquerda e
+ * executa a ação de piscar ou desligar a seta. Se a seta estiver
+ * ativa, a thread dorme por 1 segundo, liga e desliga a seta,
+ * e volta a dormir por 1 segundo. Se a seta estiver desativada,
+ * a thread garante que a seta esteja desligada e dorme por 200
+ * milissegundos.
+ * 
+ * @param arg Argumento da thread (não utilizado neste caso)
+ * @return NULL
+ */
 void *threadPiscaSetaEsq(void *arg) {
     (void)arg; // Silenciar warning de parâmetro não utilizado
 
@@ -449,6 +559,21 @@ void *threadPiscaSetaEsq(void *arg) {
     return NULL;
 }
 
+/**
+ * @brief Thread para piscar seta direita
+ *
+ * A thread PiscaSetaDir é responsável por piscar a seta direita
+ * quando o status_trigg->seta_dir estiver ativo. Ela espera por
+ * um sinal de sincronização, consulta o status da seta direita e
+ * executa a ação de piscar ou desligar a seta. Se a seta estiver
+ * ativa, a thread dorme por 1 segundo, liga e desliga a seta,
+ * e volta a dormir por 1 segundo. Se a seta estiver desativada,
+ * a thread garante que a seta esteja desligada e dorme por 200
+ * milissegundos.
+ *
+ * @param arg Argumento da thread (não utilizado neste caso)
+ * @return NULL
+ */
 void *threadPiscaSetaDir(void *arg) {
     (void)arg;
 
@@ -470,26 +595,39 @@ void *threadPiscaSetaDir(void *arg) {
     return NULL;
 }
 
+/**
+ * @brief Thread para ler comandos do painel de comando.
+ *
+ * A thread ThreadComandosDash é responsável por ler os comandos do painel
+ * de comando e executar ações correspondentes. Ela lê constantemente os
+ * pedais do acelerador e freio, e executa ações de aceleração ou frenagem
+ * dependendo do estado dos pedais. Além disso, a thread lê os comandos de
+ * faróis e setas e atualiza o status_trigg com os novos valores.
+ *
+ * @param arg Argumento da thread (não utilizado neste caso)
+ * @return NULL
+ */
 void *threadComandosDash(void *arg) {
     (void)arg;
 
     while (running) {
         // Leitura dos pedais
         if (digitalRead(PEDAL_AC)) {
-            motorDuty = (motorDuty < 10) ? motorDuty + 1 : 10;
-            softPwmWrite(MOTOR_POT, motorDuty);
-            softPwmWrite(FREIO_INT, 0);
+            freioDuty = 0;
+            softPwmWrite(FREIO_INT, freioDuty);
             digitalWrite(LUZ_FREIO, LOW);
             motor_set_direction('D');
+            motorDuty = (motorDuty < 10) ? motorDuty + 1 : 10;
+            softPwmWrite(MOTOR_POT, motorDuty);
         }
         if (digitalRead(PEDAL_FR)) {
-            freioDuty = (freioDuty < 10) ? freioDuty + 1 : 10;
-            softPwmWrite(FREIO_INT, freioDuty);
-            softPwmWrite(MOTOR_POT, 0);
+            motorDuty = 0;
+            softPwmWrite(MOTOR_POT, motorDuty);
             digitalWrite(LUZ_FREIO, HIGH);
             motor_set_direction('B');
+            freioDuty = (freioDuty < 10) ? freioDuty + 1 : 10;
+            softPwmWrite(FREIO_INT, freioDuty);
         }
-
         // Leitura dos comandos de faróis e setas
         if (digitalRead(COMANDO_FAROL_BAIXO)) {
             sem_wait(sem_sync);
@@ -520,9 +658,19 @@ void *threadComandosDash(void *arg) {
     return NULL;
 }
 
-// --------------------------
-// 9. Loop Principal
-// --------------------------
+/**
+ * @brief Executa o controle principal do sistema.
+ *
+ * A função process_control é responsável por criar e gerenciar threads
+ * para piscar setas e ler comandos do painel. Ela executa o loop principal
+ * que monitora dados de sensores como velocidade, RPM e temperatura,
+ * aplicando regras de segurança e limites. A função também processa
+ * comandos recebidos do painel de controle, permitindo a interação
+ * com diversos acionadores, como setas, faróis, e pedais do veículo.
+ * 
+ * A função garante a correta sincronização de dados compartilhados
+ * utilizando semáforos e gerencia o estado dos acionadores do veículo.
+ */
 void process_control() {
     // Criar threads para piscar setas
     pthread_t th_esq, th_dir, th_comandos;
@@ -557,38 +705,38 @@ void process_control() {
         printf("Temperatura: %.2f ºC\n", aux_temp);
 
         // Atualizar velocidade e RPM
-        //sem_wait(sem_sync);
         clock_gettime(CLOCK_MONOTONIC, &ultimoTempoRoda_a);
         clock_gettime(CLOCK_MONOTONIC, &ultimoTempoRoda_b);
         clock_gettime(CLOCK_MONOTONIC, &ultimoTempoMotor);
         aux_vel = velocidade();
         aux_rpm = motor_rpm();
-        //sem_post(sem_sync);
 
         // Regras de limite
         if (aux_vel > 200.0) {
-            aux_vel *= 0.9; 
+            motorDuty = (motorDuty > 0) ? motorDuty - 1 : 0;
+            softPwmWrite(MOTOR_POT, motorDuty);
             cont_vel_sup++;
         } else if (aux_vel < 20.0 && aux_vel > 0.0) {
-            aux_vel *= 1.1; 
+            motorDuty = (motorDuty < 10) ? motorDuty + 1 : 10;
+            softPwmWrite(MOTOR_POT, motorDuty); 
             cont_vel_inf++;
         }
-
         if (aux_rpm > 7000) {
-            aux_rpm *= 0.9;
+            motorDuty = (motorDuty > 0) ? motorDuty - 1 : 0;
+            softPwmWrite(MOTOR_POT, motorDuty);
             cont_rpm_sup++;
         } else if (aux_rpm < 780) {
-            aux_rpm = 0; 
+            motorDuty = 0;
+            softPwmWrite(MOTOR_POT, motorDuty); 
             cont_rpm_inf++;
             printf("\n========= O motor apagou =========\n");
             raise(SIGUSR2);
         }
-        
         if (aux_temp >= MAX_TEMP_MOTOR) {
             printf("\n========= ALERTA DE TEMPERATURA =========\n");
             cont_max_temp++;
-            aux_vel *= 0.9;
-            aux_rpm *= 0.9;
+            motorDuty = (motorDuty > 0) ? motorDuty - 1 : 0;
+            softPwmWrite(MOTOR_POT, motorDuty);
             digitalWrite(LUZ_TEMP_MOTOR, HIGH);
         } else {
             digitalWrite(LUZ_TEMP_MOTOR, LOW);
@@ -670,31 +818,31 @@ void process_control() {
                 status_trigg->farol_alto = false;
                 sem_post(sem_sync);
             } else if (strcmp(msg.command, "Acionar Pedal do Acelerador") == 0) {
-                // Aumentar duty cycle do motor
-                if (motorDuty < 10) motorDuty += 1; 
-                if (motorDuty > 10) motorDuty = 10;
-                softPwmWrite(MOTOR_POT, motorDuty);
-                
+                // Desabilitar freio
                 freioDuty = 0;
                 softPwmWrite(FREIO_INT, freioDuty);
-
                 digitalWrite(LUZ_FREIO, LOW);
 
                 // Ajustar direção para frente
                 motor_set_direction('D');
-            } else if (strcmp(msg.command, "Acionar Pedal do Freio") == 0) {
-                // Aumentar duty cycle do freio
-                if (freioDuty < 10) freioDuty += 1;
-                if (freioDuty > 10) freioDuty = 10;
-                softPwmWrite(FREIO_INT, freioDuty);
-                
-                motorDuty = 0;
+
+                // Aumentar duty cycle do motor
+                motorDuty = (motorDuty < 10) ? motorDuty + 1 : 10;
                 softPwmWrite(MOTOR_POT, motorDuty);
 
+            } else if (strcmp(msg.command, "Acionar Pedal do Freio") == 0) {
+                // Desabilitar motor
+                motorDuty = 0;
+                softPwmWrite(MOTOR_POT, motorDuty);
                 digitalWrite(LUZ_FREIO, HIGH);
                 
                 // Setar motor em 'B' (freio ativo)
                 motor_set_direction('B');
+
+                // Aumentar duty cycle do freio
+                freioDuty = (freioDuty < 10) ? freioDuty + 1 : 10;
+                softPwmWrite(FREIO_INT, freioDuty);
+
             } else if (strcmp(msg.command, "Encerrar") == 0) {
                 raise(SIGUSR2);
             }
@@ -705,9 +853,19 @@ void process_control() {
     }
 }
 
-// --------------------------
-// 10. Cleanup
-// --------------------------
+
+/**
+ * @brief Limpa recursos antes de sair do programa.
+ *
+ * Limpa todos os recursos alocados durante a execução do programa.
+ * Isso inclui:
+ *  - Zerar PWM do motor e do freio;
+ *  - Desligar faróis e setas;
+ *  - Desanexar e remover memória compartilhada;
+ *  - Fechar semáforo.
+ *
+ * @return Nenhum.
+ */
 void cleanup() {
     static bool cleaned = false;
     if (cleaned) return; 
@@ -747,9 +905,15 @@ void cleanup() {
     printf("======== Recursos liberados com sucesso!========\n");
 }
 
-// --------------------------
-// 11. Main
-// --------------------------
+/**
+ * @brief Ponto de entrada do programa.
+ *
+ * Inicializa todos os recursos necessários e executa o loop principal do
+ * programa. Ao final, limpa todos os recursos e exibe um relatório sobre os
+ * acionamentos dos limitadores do programa.
+ *
+ * @return 0 se o programa for executado com sucesso.
+ */
 int main() {
     setup_signals();
 
