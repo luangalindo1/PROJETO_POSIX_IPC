@@ -619,8 +619,7 @@ void *threadComandosDash(void *arg) {
             motor_set_direction('D');
             motorDuty = (motorDuty < 10) ? motorDuty + 1 : 10;
             softPwmWrite(MOTOR_POT, motorDuty);
-        }
-        if (digitalRead(PEDAL_FR)) {
+        } else if (digitalRead(PEDAL_FR)) {
             motorDuty = 0;
             softPwmWrite(MOTOR_POT, motorDuty);
             digitalWrite(LUZ_FREIO, HIGH);
@@ -628,19 +627,18 @@ void *threadComandosDash(void *arg) {
             freioDuty = (freioDuty < 10) ? freioDuty + 1 : 10;
             softPwmWrite(FREIO_INT, freioDuty);
         }
-        // Leitura dos comandos de faróis e setas
         if (digitalRead(COMANDO_FAROL_BAIXO)) {
             sem_wait(sem_sync);
             status_trigg->farol_baixo = !status_trigg->farol_baixo;
             digitalWrite(FAROL_BAIXO, status_trigg->farol_baixo ? HIGH : LOW);
             sem_post(sem_sync);
-        }
+        } 
         if (digitalRead(COMANDO_FAROL_ALTO)) {
             sem_wait(sem_sync);
             status_trigg->farol_alto = !status_trigg->farol_alto;
             digitalWrite(FAROL_ALTO, status_trigg->farol_alto ? HIGH : LOW);
             sem_post(sem_sync);
-        }
+        } 
         if (digitalRead(COMANDO_SETA_ESQ)) {
             sem_wait(sem_sync);
             status_trigg->seta_esq = !status_trigg->seta_esq;
@@ -651,7 +649,6 @@ void *threadComandosDash(void *arg) {
             status_trigg->seta_dir = !status_trigg->seta_dir;
             sem_post(sem_sync);
         }
-
         usleep(50000); // Intervalo para evitar polling agressivo
     }
 
