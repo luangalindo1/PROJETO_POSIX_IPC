@@ -1,0 +1,119 @@
+**[Início da apresentação]**
+
+Olá! Meu nome é Luan, e essa é a apresentação do projeto que desenvolvi como parte do curso de **Padrão POSIX**, ministrado no programa de Residência Tecnológica Stellantis 2024. Esse projeto simula um sistema automotivo distribuído utilizando conceitos avançados de **Comunicação Interprocessual POSIX**. Ao longo dessa apresentação, eu vou explicar como o sistema foi projetado, como ele funciona e quais foram os desafios e soluções que enfrentei.
+
+---
+
+### **Contextualização do Projeto**
+
+A ideia principal do projeto é criar uma **simulação automotiva realista** composta por três componentes principais que trabalham juntos:
+
+1. **Painel de Comando** – a interface do usuário para controlar o veículo.
+2. **Controlador do Veículo** – o cérebro do sistema, que processa comandos e gerencia os sensores.
+3. **Simulador de Sensores** – responsável por gerar os dados do veículo, como velocidade, RPM e temperatura.
+
+Esses três módulos se comunicam utilizando mecanismos de IPC (Inter-Process Communication ) POSIX, como **memória compartilhada**, **filas de mensagens** e **semáforos**, que garantem uma comunicação eficiente, sincronizada e segura entre os processos.
+
+---
+
+### **Sobre a Estrutura do Sistema**
+
+#### **1. Painel de Comando**
+O **Painel de Comando** é o ponto de interação com o sistema. Ele apresenta um menu interativo ao usuário, permitindo ações como:
+
+- Ligar e desligar as setas.
+- Acender os faróis.
+- Acionar o acelerador ou o freio.
+- E até encerrar o sistema.
+
+O painel envia comandos para o **Controlador do Veículo** utilizando uma **fila de mensagens**. Por exemplo, se o usuário optar por "Ligar a Seta Esquerda", o painel envia uma mensagem com esse comando. Ele também monitora mensagens do Controlador para eventos como o encerramento do sistema.
+
+---
+
+#### **2. Controlador do Veículo**
+O **Controlador** é o componente mais complexo do sistema. Ele tem três funções principais:
+
+- **Gerenciar os dados dos sensores:** Ele lê os valores de velocidade, RPM e temperatura gerados pelo Simulador de Sensores. Esses dados são armazenados em **memória compartilhada**, permitindo um acesso rápido e eficiente.
+  
+- **Processar comandos:** Quando o Painel envia um comando, como "Ligar Farol Alto", o Controlador aplica esse comando e atualiza o estado do sistema.
+
+- **Implementar regras de segurança:** O Controlador monitora os dados dos sensores para garantir que o veículo opere dentro de limites seguros. Por exemplo, ele aplica limitadores caso a velocidade ultrapasse 200 km/h ou a temperatura do motor supere 140°C.
+
+Para garantir que os dados sejam acessados de forma segura, o Controlador utiliza **semáforos**, que impedem que múltiplos processos modifiquem os mesmos dados ao mesmo tempo.
+
+---
+
+#### **3. Simulador de Sensores**
+O **Simulador de Sensores** é o componente que dá vida ao sistema. Ele gera, de forma contínua e aleatória, os valores para três sensores:
+
+- **Velocidade:** Entre 0 e 200 km/h.
+- **RPM:** Entre 500 e 8000.
+- **Temperatura do motor:** Calculada dinamicamente com base na velocidade e no RPM, utilizando uma fórmula que simula o aquecimento e o resfriamento do motor.
+
+Cada sensor é executado em uma **thread separada**, simulando leituras paralelas e contínuas. Esses dados são armazenados na memória compartilhada, prontos para serem consumidos pelo Controlador.
+
+---
+
+### **Fluxo de Execução**
+
+O sistema funciona de forma modular e sequencial. Primeiro, o **Controlador** é iniciado. Ele cria os recursos de IPC, como a memória compartilhada e a fila de mensagens. Em seguida, o **Simulador de Sensores** começa a gerar dados. Por último, o **Painel de Comando** é iniciado, permitindo que o usuário interaja com o sistema.
+
+Um exemplo simples do fluxo seria:
+
+1. O usuário seleciona a opção "Acender Farol Baixo" no Painel de Comando.
+2. O Painel envia esse comando ao Controlador via fila de mensagens.
+3. O Controlador executa o comando e atualiza o estado do farol.
+4. Enquanto isso, o Controlador continua lendo os dados dos sensores para garantir que tudo esteja dentro dos limites.
+
+Caso o comando "Encerrar" seja enviado, o Controlador notifica o Painel e encerra o sistema de forma segura, liberando todos os recursos IPC.
+
+---
+
+### **Destaques do Projeto**
+
+1. **Uso de IPC POSIX:**
+   - A memória compartilhada garante comunicação em tempo real entre o Simulador e o Controlador.
+   - A fila de mensagens permite que o Painel envie comandos de forma assíncrona.
+   - Os semáforos garantem que múltiplos processos não interfiram uns nos outros.
+
+2. **Modularidade:**
+   - O sistema foi projetado de forma modular, facilitando a manutenção e a escalabilidade. Cada componente pode ser testado e aprimorado de forma independente.
+
+3. **Segurança:**
+   - O Controlador implementa regras para evitar condições críticas, como velocidade excessiva ou superaquecimento do motor.
+
+4. **Automação com Makefile:**
+   - Um **Makefile** foi criado para compilar e organizar o projeto, tornando o processo simples e eficiente.
+
+---
+
+### **Testes e Resultados**
+
+Testei o sistema em diferentes cenários para validar sua funcionalidade:
+
+- **Velocidade máxima:** O limitador de velocidade foi acionado corretamente ao atingir 200 km/h.
+- **Comandos inválidos:** Comandos desconhecidos foram ignorados sem prejudicar o sistema.
+- **Interrupção de sensores:** Mesmo quando o Simulador foi pausado, o Controlador manteve os últimos valores conhecidos.
+
+Esses testes garantiram que o sistema é robusto, seguro e funcional.
+
+---
+
+### **Possíveis Melhorias**
+
+Embora o projeto tenha atingido seus objetivos, sempre há espaço para melhorias. Algumas ideias incluem:
+
+- Adicionar novos sensores, como pressão dos pneus ou consumo de combustível.
+- Criar uma interface gráfica para o Painel de Comando.
+- Implementar logs detalhados para auditoria e depuração.
+- Expandir o sistema para suportar simulações mais complexas, como diferentes condições climáticas.
+
+---
+
+### **Conclusão**
+
+Este projeto foi uma oportunidade incrível para aplicar conceitos de **Comunicação Interprocessual POSIX** em um cenário realista. Ele me desafiou a pensar em modularidade, sincronização e segurança, enquanto construía um sistema funcional e escalável.
+
+Espero que tenham gostado da apresentação e que ela tenha mostrado como conceitos técnicos podem ser aplicados para resolver problemas práticos. Se vocês tiverem dúvidas ou quiserem saber mais detalhes, estou à disposição. Muito obrigado pela atenção!
+
+**[Encerrar com um sorriso]**

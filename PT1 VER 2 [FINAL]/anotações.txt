@@ -1,0 +1,18 @@
+// comando para compilar o código do controlador
+gcc -o controller controller.c -lpthread -lrt -lm
+
+-o controlador: Nome do executável gerado.
+-lpthread: Linka a biblioteca de threads POSIX.
+-lrt: Necessário em alguns sistemas para funções de tempo real e IPC.
+
+// para os outros programas
+gcc -o command_panel command_panel.c
+gcc -o sensor_sim sensor_sim.c -lm -lpthread
+
+
+// para executar: ./[OBJETO CRIADO]
+- ordem: controlador, sensores e painel de comando
+
+
+--- solução para o relatório
+transformar os printf em uma função void a ser chamada no encerramento do programa (?)
