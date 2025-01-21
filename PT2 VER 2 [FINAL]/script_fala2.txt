@@ -1,0 +1,110 @@
+#### **Introdução (1 minuto)**
+
+*Olá, meu nome é Luan, e essa é a continuação da apresentação do trabalho final do curso de Padrão POSIX, como parte do programa de Residência Tecnológica Stellantis 2024. Agora irei falar da parte 2 do trabalho.
+
+Este projeto é um sistema automotivo baseado em conceitos de comunicação interprocessual e integração de hardware, sendo composto por três principais artefatos:
+
+1. **Painel de Comando** – Um menu interativo que permite ao usuário controlar funções do veículo.
+2. **Controlador do Veículo** – O coração do sistema, responsável por gerenciar sensores e atuadores.
+3. **Makefile** – Ferramenta para automatizar a compilação e organização do projeto.
+
+O objetivo do sistema é proporcionar uma interface funcional e robusta para controle automotivo, integrando sensores e atuadores físicos com IPC POSIX.
+
+---
+
+#### **Descrição do Sistema e Arquitetura (3 minutos)**
+
+##### **1. Painel de Comando**
+O Painel de Comando funciona como uma das interfaces do usuário. Ele utiliza filas de mensagens IPC para enviar comandos ao controlador e processa respostas vindas deste.
+
+- Exemplos de comandos:
+  - Ligar e desligar setas.
+  - Ativar pisca-alerta.
+  - Ligar ou desligar faróis.
+  - Acionar pedais de aceleração e freio.
+
+O painel também trata sinais, como o `SIGINT` (Ctrl + C), para realizar um encerramento seguro, enviando o comando "Encerrar" ao controlador antes de finalizar, conforme especificado no enunciado.
+
+##### **2. Controlador do Veículo**
+O Controlador é responsável por:
+
+- Monitorar os sensores:
+  - **Velocidade e RPM**, calculados a partir de pulsos dos sensores Hall.
+  - **Temperatura do motor**, utilizando uma fórmula dada.
+- Controlar os atuadores:
+  - Direção do motor (frente, ré, neutro, freio).
+  - Faróis, setas e luzes de alerta.
+  - Pedais de aceleração e freio, usando PWM para ajustar intensidade.
+
+O controlador se comunica com o Painel de Comando por meio de memória compartilhada e semáforos, garantindo sincronização e consistência nos dados.
+
+##### **3. Makefile**
+O Makefile automatiza a compilação do sistema, organizando o processo em três etapas principais:
+
+1. Compilação do Painel de Comando.
+2. Compilação do Controlador do Veículo, com suporte à biblioteca **WiringPi** para GPIO e PWM.
+3. Limpeza dos artefatos gerados com o comando `make clean`.
+
+---
+
+#### **Demonstração de Funcionalidades (3 minutos)**
+
+Vamos agora explorar as principais funcionalidades por meio de cenários de uso.
+
+##### **1. Controle de Setas**
+No Painel de Comando, o usuário pode ligar e desligar as setas esquerda e direita. O Controlador, por sua vez, aciona as luzes correspondentes, piscando de forma assíncrona por meio de threads dedicadas. O mesmo pode ser visto no Dashboard.
+
+##### **2. Monitoramento de Sensores**
+Simulamos pulsos nos sensores Hall para medir:
+- **Velocidade** – calculada a partir de dois sensores Hall nas rodas.
+- **RPM** – medido com um sensor Hall no motor.
+
+O sistema aplica limites de segurança. Por exemplo:
+- Se a velocidade ultrapassar 200 km/h, o controlador desacelera automaticamente.
+- Caso o RPM fique abaixo de 780, o motor é desligado, simulando uma falha tal como acontece nos carros manuais.
+
+##### **3. Controle de Faróis**
+O sistema permite ativar faróis baixos, altos e o pisca-alerta. Cada ação é refletida nos pinos conectados ao GPIO.
+
+##### **4. Pedais**
+- Pressionar o pedal de aceleração aumenta o duty cycle do PWM, incrementando a velocidade do motor.
+- O pedal de freio reduz a velocidade e ativa as luzes de freio.
+
+##### **5. Encerramento Seguro**
+O usuário pode encerrar o sistema de duas maneiras:
+- Pelo menu, escolhendo a opção "Sair".
+- Pressionando Ctrl + C, que aciona o sinal `SIGINT` para um encerramento controlado.
+
+---
+
+#### **Cenários de Teste e Validação (2 minutos)**
+
+Durante o desenvolvimento, realizamos diversos testes para validar a robustez do sistema. Aqui estão alguns cenários:
+
+1. **Teste de Comunicação IPC:**
+   - Verificou-se que comandos enviados do Painel de Comando são corretamente processados pelo Controlador.
+   - Mensagens de encerramento também foram testadas para garantir a liberação segura dos recursos.
+
+2. **Validação de Sensores:**
+   - Simulou-se pulsos nos sensores Hall e comparamos os cálculos de velocidade e RPM com valores esperados.
+   - Testou-se os limites definidos para evitar velocidades excessivas ou motores superaquecidos.
+
+3. **Teste de Atuação Física:**
+   - Monitorou-se o Dashboard para confirmar que faróis e setas funcionam conforme esperado.
+   - Validou-se o funcionamento do PWM para controle de motores e pedais.
+
+4. **Robustez:**
+   - Simulou-se entradas inválidas no Painel de Comando e verificamos que o sistema as trata adequadamente, mantendo a operação normal.
+
+---
+
+#### **Encerramento e Próximos Passos (1 minuto)**
+
+Este projeto demonstrou como conceitos de IPC POSIX podem ser aplicados a sistemas automotivos, integrando hardware físico e software de forma eficiente. 
+
+**Próximos passos:**
+1. Adicionar suporte ao Cruise Control, integrando sensores de velocidade de forma dinâmica (com respectivo update na placa).
+2. Expandir o sistema para incluir mais sensores e atuadores, como controle de climatização.
+3. Implementar logs detalhados para monitorar a operação em tempo real.
+
+*Obrigado pela atenção! Estou à disposição para dúvidas e fico no aguardo do feedback.
